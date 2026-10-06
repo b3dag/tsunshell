@@ -1,0 +1,7 @@
+Hmph, happy now? (%s%)
+Fine, bigger or smaller, whatever you wanted. (%s%)
+Hmph, is this size better? (%s%)
+D-Don't stare just because I'm bigger now. (%s%)
+Hmph, there, resized. (%s%)
+I-I hope that's what you wanted. (%s%)
+Hmph, (%s%) now. Don't ask again right away.

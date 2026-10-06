@@ -1,0 +1,15 @@
+D-Did you mean `%s`? Idiot.
+Hmph, it's obviously `%s`, baka!
+It's `%s`. Can't you even spell?!
+I-I guess you meant `%s`... don't thank me!
+Hmph, you meant `%s`, obviously.
+Try `%s` next time, baka, and get it right.
+D-Don't tell me you meant `%s` and typed that instead.
+Hmph, `%s` isn't that hard to spell, idiot.
+I-I'm only telling you it's `%s` because I have to.
+Was it `%s`? Hmph, obviously.
+`%s`, baka. Get it right next time.
+I-I guess autocorrect isn't a thing for your brain, it's `%s`.
+Hmph, close enough... you meant `%s`, right?
+D-Did your fingers slip? It's `%s`.
+Try typing `%s` properly this time, idiot.

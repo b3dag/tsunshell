@@ -1,0 +1,12 @@
+casual/bust 400 342
+casual/full 400 977
+casual/waist 400 586
+schoolsummer/bust 400 342
+schoolsummer/full 400 977
+schoolsummer/waist 400 586
+schoolwinter/bust 400 342
+schoolwinter/full 400 977
+schoolwinter/waist 400 586
+sundress/bust 400 307
+sundress/full 400 877
+sundress/waist 400 526

@@ -42,13 +42,13 @@ install_file "$HERE/shell/tsundere.sh" "$HOME/.config/tsundere/tsundere.sh"
 echo "== Phrase files"
 bash "$HERE/scripts/lines.sh"
 
-if ((DO_IMAGES)); then
+if ((DO_IMAGES)) && [[ -d "$HERE/images/sprites" ]]; then
   echo "== Images"
-  mkdir -p "$HOME/.config/tsundere"
-  for img in "$HERE"/images/*.png; do
-    [[ -f $img ]] || continue
-    install_file "$img" "$HOME/.config/tsundere/$(basename "$img")"
-  done
+  mkdir -p "$HOME/.config/tsundere/sprites"
+  cp -r "$HERE/images/sprites/." "$HOME/.config/tsundere/sprites/"
+  outfits=$(cd "$HERE/images/sprites" && for d in */; do echo "${d%/}"; done)
+  echo "installed $HOME/.config/tsundere/sprites (outfits: ${outfits//$'\n'/ })"
+  echo "Pick one with: tsun outfit <name>"
 fi
 
 if ((DO_WEZTERM)); then
@@ -56,25 +56,14 @@ if ((DO_WEZTERM)); then
   install_file "$HERE/wezterm/wezterm.lua" "$HOME/.config/wezterm/wezterm.lua"
 fi
 
-echo "== Starship"
-if [[ -f $HOME/.config/starship.toml ]]; then
-  echo "You already have ~/.config/starship.toml, so it was left alone."
-  echo "Merge the custom.tsundere block and the \${custom.tsundere} part of the format from"
-  echo "  $HERE/starship/starship.toml"
-else
-  install_file "$HERE/starship/starship.toml" "$HOME/.config/starship.toml"
-fi
-
 cat << 'EOF'
 
 == One manual step
-Put these four lines at the very end of ~/.bashrc, in this order.
+Add this line anywhere in ~/.bashrc (the end is fine).
 
-  source ~/.local/share/blesh/ble.sh --noattach
-  eval "$(starship init bash)"
   [[ -f ~/.config/tsundere/tsundere.sh ]] && source ~/.config/tsundere/tsundere.sh
-  [[ ${BLE_VERSION-} ]] && ble-attach
 
-Then open a new terminal. The sudo messages and the goodbye line are optional,
-see docs/SETUP.md, parts 6 and 7.
+If you have older ble.sh or starship init lines from a previous setup,
+neither is required anymore, remove them if you like. Then open a new
+terminal.
 EOF
