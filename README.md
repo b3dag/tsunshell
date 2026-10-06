@@ -27,7 +27,7 @@ All lines are plain text files, so you can add your own without touching any cod
 ## Install
 
 ```bash
-git clone github.com/b3dag/tsunshell
+git clone https://github.com/b3dag/tsunshell
 cd tsunshell
 ./install.sh
 ```
