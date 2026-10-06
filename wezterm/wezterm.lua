@@ -20,7 +20,24 @@ local MOOD_FILE = {
   happy = 'blushsmile',
   surprised = 'noclue',
   sleepy = 'hah',
+  scared = 'fear',       -- a dangerous command that failed
+  fedup = 'sad',         -- three or more failures in a row
+  worried = 'worried',   -- bedtime nag, long-session break reminder
+  disgusted = 'disgusted', -- git repo too dirty for her taste
 }
+
+-- Briefly shown instead of the file above while she's actively saying
+-- something, for moods that have a matching open-mouth drawing in the pack.
+-- A mood with no entry here just keeps its idle face while talking.
+local TALK_FILE = {
+  normal = 'normaltalking',
+  angry = 'angrytalking',
+  happy = 'blushtalking',
+  fedup = 'sadtalking',
+}
+
+-- How long after she speaks the talking face stays up
+local TALK_SECONDS = 2.5
 
 -- Seconds without activity before she falls asleep
 local SLEEP_AFTER = 300
@@ -49,12 +66,13 @@ local RATIOS = load_ratios()
 
 -- Resolves (outfit, crop, mood) to a directory, filename and aspect ratio.
 -- Returns nil if that outfit/crop has no known size yet (nothing drawn).
-local function resolve(outfit, crop, mood)
+local function resolve(outfit, crop, mood, talking)
   local ratio = RATIOS[outfit .. '/' .. crop]
   if not ratio then
     return nil
   end
-  local file = (MOOD_FILE[mood] or mood) .. '.png'
+  local name = (talking and TALK_FILE[mood]) or MOOD_FILE[mood] or mood
+  local file = name .. '.png'
   return SPRITES_DIR .. outfit .. '/' .. crop .. '/', file, ratio
 end
 
@@ -107,6 +125,8 @@ wezterm.on('update-status', function(window, pane)
   local size = tonumber(uv.tsun_size) or DEFAULT_SIZE
   local sig = pos.x .. ',' .. pos.y .. ',' .. mood .. ',' .. outfit .. ',' .. crop .. ',' .. size
   local now = os.time()
+  local talk_ts = tonumber(uv.tsun_talk)
+  local talking = talk_ts ~= nil and (now - talk_ts) < TALK_SECONDS
 
   local h = math.floor(dims.pixel_height * (size / 100))
   if h < 50 then
@@ -129,9 +149,9 @@ wezterm.on('update-status', function(window, pane)
     want = 'sleepy'
   end
 
-  local dir, file, ratio = resolve(outfit, crop, want)
+  local dir, file, ratio = resolve(outfit, crop, want, talking)
   local w = ratio and math.floor(h * ratio) or 0
-  local shown = want .. '|' .. outfit .. '|' .. crop .. '|' .. h
+  local shown = want .. '|' .. tostring(talking) .. '|' .. outfit .. '|' .. crop .. '|' .. h
 
   if st.shown ~= shown then
     st.shown = shown

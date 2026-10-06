@@ -66,7 +66,10 @@ MY_S_OK=0
 MY_S_FAIL=0
 MY_S_STREAK=0
 MY_S_BEST=0
+MY_FAIL_STREAK=0
+MY_CHAT_TODAY=0
 MY_CMD=
+MY_SPOKE=
 MY_LAST_HISTNUM=0
 MY_LAST_BREAK=$SECONDS
 MY_OUTFIT=
@@ -77,6 +80,7 @@ MY_SIZE=$MY_SIZE_DEFAULT
 function my/say-force {
   [[ -f $1 ]] || return 1
   printf '\033[1;38;2;%sm%s\033[0m\n' "$2" "$(shuf -n1 "$1")"
+  MY_SPOKE=1
 }
 
 # Same, but silent when she is muted
@@ -121,6 +125,14 @@ function my/mood {
   printf '\033]1337;SetUserVar=tsun_outfit=%s\007' "$(printf '%s' "$MY_OUTFIT" | base64)"
   printf '\033]1337;SetUserVar=tsun_crop=%s\007' "$(printf '%s' "$MY_CROP" | base64)"
   printf '\033]1337;SetUserVar=tsun_size=%s\007' "$(printf '%s' "$MY_SIZE" | base64)"
+  # Lets WezTerm flash an open-mouth variant of the current face for a
+  # couple seconds, instead of her always looking the same whether she
+  # just said something or not
+  if [[ $MY_SPOKE && $m != off ]]; then
+    local ts
+    printf -v ts '%(%s)T' -1
+    printf '\033]1337;SetUserVar=tsun_talk=%s\007' "$(printf '%s' "$ts" | base64)"
+  fi
 }
 
 # Lists installed outfit names, one per line: every sprites/ subfolder,
@@ -192,8 +204,9 @@ function my/state-load {
   MY_EVER=0
   MY_EVER_OK=0
   MY_EVER_FAIL=0
-  [[ -f $STATE_FILE ]] && read -r MY_S_DATE MY_S_OK MY_S_FAIL MY_S_STREAK MY_S_BEST MY_TOTAL MY_EVER MY_EVER_OK MY_EVER_FAIL < "$STATE_FILE"
-  for v in MY_S_OK MY_S_FAIL MY_S_STREAK MY_S_BEST MY_TOTAL MY_EVER MY_EVER_OK MY_EVER_FAIL; do
+  MY_CHAT_TODAY=0
+  [[ -f $STATE_FILE ]] && read -r MY_S_DATE MY_S_OK MY_S_FAIL MY_S_STREAK MY_S_BEST MY_TOTAL MY_EVER MY_EVER_OK MY_EVER_FAIL MY_CHAT_TODAY < "$STATE_FILE"
+  for v in MY_S_OK MY_S_FAIL MY_S_STREAK MY_S_BEST MY_TOTAL MY_EVER MY_EVER_OK MY_EVER_FAIL MY_CHAT_TODAY; do
     [[ ${!v} =~ ^[0-9]+$ ]] || printf -v "$v" '%s' 0
   done
   if [[ $MY_S_DATE != "$today" ]]; then
@@ -202,12 +215,13 @@ function my/state-load {
     MY_S_FAIL=0
     MY_S_STREAK=0
     MY_S_BEST=0
+    MY_CHAT_TODAY=0
   fi
 }
 
 function my/state-save {
   mkdir -p "$STATE_DIR" 2>/dev/null
-  printf '%s %s %s %s %s %s %s %s %s\n' "$MY_S_DATE" "$MY_S_OK" "$MY_S_FAIL" "$MY_S_STREAK" "$MY_S_BEST" "$MY_TOTAL" "$MY_EVER" "$MY_EVER_OK" "$MY_EVER_FAIL" > "$STATE_FILE"
+  printf '%s %s %s %s %s %s %s %s %s %s\n' "$MY_S_DATE" "$MY_S_OK" "$MY_S_FAIL" "$MY_S_STREAK" "$MY_S_BEST" "$MY_TOTAL" "$MY_EVER" "$MY_EVER_OK" "$MY_EVER_FAIL" "$MY_CHAT_TODAY" > "$STATE_FILE"
 }
 
 function my/calc-level {
@@ -437,8 +451,21 @@ function tsun {
         echo "...Fine. We start from zero, baka."
       fi
       ;;
+    ai|talk|aisetup)
+      # Lives in its own file so this one doesn't keep growing, loaded only
+      # the first time any of these is actually used
+      if ! declare -F my/ai-dispatch >/dev/null; then
+        if [[ -f "$LINES_DIR/ai.sh" ]]; then
+          source "$LINES_DIR/ai.sh"
+        else
+          echo "AI chat isn't installed (missing ai.sh)." >&2
+          return 1
+        fi
+      fi
+      my/ai-dispatch "$@"
+      ;;
     *)
-      echo "Usage  tsun off | on | stats | say | reset | outfit [name] | crop [name] | size [bigger|smaller|reset|N]"
+      echo "Usage  tsun off | on | stats | say | reset | outfit [name] | crop [name] | size [bigger|smaller|reset|N] | ai [anthropic|ollama|off] [model] | talk [message] | aisetup [name value|reset]"
       ;;
   esac
 }
@@ -541,6 +568,7 @@ function my/tsundere-precmd {
   esac
 
   local face=normal said= oldlevel
+  MY_SPOKE=
 
   # Reload shared state so several terminals agree
   my/meter-load
@@ -555,6 +583,7 @@ function my/tsundere-precmd {
     ((MY_S_FAIL++))
     ((MY_EVER_FAIL++))
     MY_S_STREAK=0
+    ((MY_FAIL_STREAK++))
     ((MY_TOTAL > 0)) && ((MY_TOTAL--))
 
     [[ $danger ]] && my/say "$LINES_DIR/danger.txt" "$MY_C_WARN"
@@ -569,12 +598,20 @@ function my/tsundere-precmd {
         my/notify "Command failed" "${MY_CMD%% *} failed after ${dur}s. $(shuf -n1 "$INSULTS_FILE" 2>/dev/null)"
       fi
     fi
-    face=angry
+
+    if [[ $danger ]]; then
+      face=scared
+    elif ((MY_FAIL_STREAK >= 3)); then
+      face=fedup
+    else
+      face=angry
+    fi
   else
     ((MY_MOOD_METER++))
     ((MY_MOOD_METER > MY_MOOD_MAX)) && MY_MOOD_METER=$MY_MOOD_MAX
     ((MY_S_OK++))
     ((MY_EVER_OK++))
+    MY_FAIL_STREAK=0
     ((MY_S_STREAK++))
     ((MY_S_STREAK > MY_S_BEST)) && MY_S_BEST=$MY_S_STREAK
     ((MY_S_STREAK > MY_EVER)) && MY_EVER=$MY_S_STREAK
@@ -603,6 +640,7 @@ function my/tsundere-precmd {
               printf '\033[1;38;2;%sm%s\033[0m\n' "$MY_C_PRAISE" "${line//%s/$m}"
               said=1
               face=happy
+              MY_SPOKE=1
             fi
             break
           fi
@@ -635,7 +673,7 @@ function my/tsundere-precmd {
         local n
         n=$(git status --porcelain 2>/dev/null | wc -l)
         if ((n >= MY_GIT_DIRTY)); then
-          my/say "$LINES_DIR/git-dirty.txt" "$MY_C_WARN" && said=1
+          my/say "$LINES_DIR/git-dirty.txt" "$MY_C_WARN" && { said=1; face=disgusted; }
         elif [[ $MY_CMD == "git push"* || $MY_CMD == "git commit"* ]] && ((n == 0)); then
           my/say "$LINES_DIR/git-clean.txt" "$MY_C_PRAISE" && said=1
         fi
@@ -656,7 +694,7 @@ function my/tsundere-precmd {
         printf -v h '%(%H)T' -1
         h=$((10#$h))
         if ((h >= 23 || h < 5)) && ((RANDOM % MY_NIGHT_CHANCE == 0)); then
-          my/say "$LINES_DIR/night.txt" "$MY_C_INFO" && said=1
+          my/say "$LINES_DIR/night.txt" "$MY_C_INFO" && { said=1; face=worried; }
         fi
       fi
 
@@ -669,7 +707,7 @@ function my/tsundere-precmd {
 
   # Break reminder after a long session
   if ((SECONDS - MY_LAST_BREAK >= MY_BREAK_SECS)); then
-    my/say "$LINES_DIR/break.txt" "$MY_C_WARN"
+    my/say "$LINES_DIR/break.txt" "$MY_C_WARN" && face=worried
     MY_LAST_BREAK=$SECONDS
   fi
 

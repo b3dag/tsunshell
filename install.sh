@@ -38,6 +38,7 @@ install_file() {
 
 echo "== Shell logic"
 install_file "$HERE/shell/tsundere.sh" "$HOME/.config/tsundere/tsundere.sh"
+install_file "$HERE/shell/ai.sh" "$HOME/.config/tsundere/ai.sh"
 
 echo "== Phrase files"
 bash "$HERE/scripts/lines.sh"

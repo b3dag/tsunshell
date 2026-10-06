@@ -95,6 +95,7 @@ Check with `wezterm --version`, then launch WezTerm from your app menu.
 * **notify-send** for desktop notifications (optional, see Part 6).
 * A truecolor terminal. Check that `echo $COLORTERM` says `truecolor` or `24bit`.
 * **ImageMagick** (`convert` and `identify`), only if you want to crop your own sprite pack with `scripts/sprites.sh`. Not needed to use the bundled outfits, those are already cropped.
+* **curl**, only if you turn on `tsun talk` (see Part 9). Not needed for anything else.
 
 ---
 ## Part 2. Phrase files
@@ -123,6 +124,8 @@ Lines that start with `#` are comments.
 ## Part 3. The shell file
 
 This is the whole brain of the setup, installed as `~/.config/tsundere/tsundere.sh`. It's long enough that keeping a copy here would only go stale, so read it straight from the repo: [`shell/tsundere.sh`](../shell/tsundere.sh). The settings sit at the top, see Part 6 for what they do.
+
+[`shell/ai.sh`](../shell/ai.sh) is a separate file, installed alongside it as `~/.config/tsundere/ai.sh`, holding everything behind `tsun ai` and `tsun talk` (Part 9). It's only ever loaded the first time you actually run one of those, so it costs nothing in a normal terminal that never uses it.
 
 ---
 
@@ -168,7 +171,7 @@ For each outfit found, it auto-trims one reference expression (`--ref`, default 
 
 It also writes `sprites/ratios.txt`, one `outfit/crop width height` line per combination, merging in with whatever was already there so cropping just one new outfit never drops the others. `wezterm/wezterm.lua` reads this file to know her aspect ratio, so a new outfit never needs any hardcoded table edited by hand, just a WezTerm config reload (Ctrl+Shift+R) to pick up the new file. `tsun outfit` likewise just scans the `sprites/` folder for subdirectories, so the new outfit shows up there immediately, no restart needed on the shell side.
 
-Sprite packs rarely have an exact "surprised" or "sleepy" drawing; check the `MOOD_FILE` table near the top of `wezterm/wezterm.lua`, it maps her five moods to filenames in a set, and pick the closest fit for those two if needed, it is just a lookup table.
+Sprite packs rarely have an exact drawing for every mood; check the `MOOD_FILE` table near the top of `wezterm/wezterm.lua`, it maps her nine moods (`normal`, `angry`, `happy`, `surprised`, `sleepy`, `scared`, `fedup`, `worried`, `disgusted`) to filenames in a set, pick the closest fit for any that are missing, it is just a lookup table. The `TALK_FILE` table right below it is optional, an open-mouth variant shown for a couple seconds whenever she actually says something, for moods that have one in the pack; a mood with no entry there just keeps its idle face while talking.
 
 ### 5.2 Config file
 
@@ -198,14 +201,20 @@ After every command, the shell sends a hidden escape code with the current mood.
 | Command fails | -3 (min 0) | Angry and an insult |
 | Mistyped command name | -3 | Angry, insult and a "did you mean" suggestion |
 | Command fails with a code in `exitcodes.txt` (130 Ctrl-C, 137 OOM, 139 segfault...) | -3 | Angry and a line for that specific exit code, checked before `reactions.txt` |
-| Dangerous command | +1 if it succeeds | Panic line before it runs, surprised face |
+| 3 or more failures in a row | -3 each | Fed up face instead of angry, once it hits 3 |
+| Dangerous command succeeds | +1 | Panic line, surprised face |
+| Dangerous command fails | -3 | Panic line, insult, scared face |
 | Command over 30 seconds | +1 | "Finally done" line |
 | Success streak hits a length in `MY_STREAK_MILESTONES` | +1 | Streak callout and a happy face |
-| Git command with 10 or more changed files | +1 | Nag line |
+| Git command with 10 or more changed files | +1 | Nag line, disgusted face |
 | `git push` or `git commit` leaving a clean tree | +1 | Compliment |
 | Command listed in `reactions.txt` | +1 or -3 | Her own line for that command |
 | 1 in 100 successful commands | +1 | Rare sweet line and a happy face |
+| Occasional nag late at night | No change | Worried face |
+| Long session (break reminder) | No change | Worried face |
 | Empty Enter | No change | Nothing happens |
+
+She also briefly switches to an open-mouth "talking" variant of whatever face she's showing for about 2.5 seconds any time she actually says a line (see `TALK_FILE` in [5.1](#51-images)).
 
 ### Affection levels
 
@@ -267,10 +276,13 @@ To reset everything, run `tsun reset`.
 | `tsun crop [name]` | No name lists crop levels (`full`, `waist`, `bust`) and shows the current one; a name switches to it live |
 | `tsun size [bigger\|smaller\|reset\|N]` | No argument shows the current size; `bigger`/`smaller` step it by 5, `reset` goes back to 30, or jump straight to a number (range 10-60) |
 | `tsun reset` | Asks first, then resets mood, stats, affection and how long she's known you |
+| `tsun ai [off\|anthropic [model]\|ollama [model]]` | No argument shows the current AI provider; picks or turns off who `tsun talk` talks to (Part 9) |
+| `tsun talk [message]` | A message gets one reply; no message opens a back-and-forth chat until you type `/bye` (Part 9) |
+| `tsun aisetup [name value\|reset]` | No argument lists every AI tuning setting and its current value; a name and value changes one; `reset` puts them all back to default (Part 9) |
 
-The mute, outfit, crop and size settings are each a file, so they apply to all terminals at once and survive restarts.
+The mute, outfit, crop, size and AI provider settings are each a file, so they apply to all terminals at once and survive restarts.
 
-Running `tsun` itself, with any subcommand, never counts as a command: it does not touch the mood meter, the daily or lifetime stats, affection points, or the current streak, and you only ever get the one line `tsun` printed, not a second automatic reaction on top of it (`my/tsundere-precmd` returns immediately for anything starting with `tsun`). `off`, `on`, `outfit`, `crop` and `size` each pick their confirmation line from their own pool (`tsun-off.txt`, `tsun-on.txt`, `tsun-outfit.txt`, `tsun-crop.txt`, `tsun-size.txt`) instead of always printing the same fixed line.
+Running `tsun` itself, with any subcommand, never counts as a command: it does not touch the mood meter, the daily or lifetime stats, affection points, or the current streak, and you only ever get the one line `tsun` printed, not a second automatic reaction on top of it (`my/tsundere-precmd` returns immediately for anything starting with `tsun`). `off`, `on`, `outfit`, `crop` and `size` each pick their confirmation line from their own pool (`tsun-off.txt`, `tsun-on.txt`, `tsun-outfit.txt`, `tsun-crop.txt`, `tsun-size.txt`) instead of always printing the same fixed line. `tsun talk` is the one exception to "never counts": each exchange nudges affection up a little on its own, separate from and on top of this rule, see Part 9.
 
 ---
 ## Part 8. Test checklist
@@ -301,6 +313,76 @@ Open a **new** WezTerm window, then try each of these.
 | `tsun off` then a command | No lines, no girl |
 | `tsun on` | She is back |
 | Leave the terminal alone for 5 minutes | Sleepy girl, typing wakes her |
+| `tsun ai ollama` (Ollama installed and running) | Picks a model already pulled, prefers one with an uncensored-sounding name |
+| `tsun talk hows it going` | One in-character reply, her picture updates to match its tone |
+| `tsun talk` then a few messages, then `/bye` | Back-and-forth chat, remembers earlier messages in the same session, goodbye line on exit |
+
+---
+## Part 9. Talking to her (optional)
+
+`tsun talk` is a real AI chat, not just a random line, and it is off by default. It lives entirely in its own file, [`shell/ai.sh`](../shell/ai.sh), installed as `~/.config/tsundere/ai.sh` and only loaded the first time you actually run `tsun ai` or `tsun talk`, so it costs nothing if you never touch it. It needs `curl`.
+
+### Picking a provider
+
+```bash
+tsun ai anthropic             # uses claude-haiku-4-5-20251001 by default
+tsun ai anthropic claude-opus-5   # or name a specific model
+tsun ai ollama                 # auto-picks a model you already have pulled
+tsun ai ollama llama3.2         # or name one yourself
+tsun ai off                     # back to off
+tsun ai                         # shows the current provider and model
+```
+
+The choice is saved to `~/.cache/tsundere/ai` and applies to every terminal, same as outfit/crop/size.
+
+**Anthropic** needs `ANTHROPIC_API_KEY` set in your environment (export it from `.bashrc`, same convention as every other tool that uses it). The key is never written to any file this project creates.
+
+**Ollama** needs a local server (`ollama serve`) reachable at `MY_OLLAMA_HOST` (default `http://localhost:11434`, edit that setting at the top of `ai.sh` to change it). Run `tsun ai ollama` with no model name and it looks at what you already have pulled (`ollama list`), prefers one that looks uncensored (name containing `uncensored`, `abliterated`, `dolphin`, or similar), and otherwise just uses whatever is there. It never pulls a model on its own; if nothing is pulled yet, it tells you a couple of names to try, for example `ollama pull dolphin-mistral`.
+
+### What she actually sends
+
+Every message includes a short system prompt built from live session state: your working directory, her current affection level, today's success/fail counts, and the text and outcome of your last command. With Anthropic this leaves your machine; with Ollama it stays local. The interactive chat (`tsun talk` with no message) also keeps the last `MY_AI_HISTORY_TURNS` exchanges (default 6) in context for that session only, nothing is saved to disk once you leave.
+
+**In WezTerm, she can also see recent terminal output**, so she can actually explain an error instead of only knowing the command's name and exit code. This reads straight from WezTerm's own scrollback via `wezterm cli get-text` (`my/ai-recent-output` in `ai.sh`), the last `MY_AI_OUTPUT_LINES` lines (default 25), capped to `MY_AI_OUTPUT_CHARS` (default 1200 characters). It never redirects any file descriptor to get this, so nothing about color detection, pagers, or full-screen programs like `vim`/`less` changes, unlike the usual way of logging a shell's output. It does mean more of what's actually on your screen can leave the machine whenever an AI provider is in use (with Anthropic) — `tsun aisetup MY_AI_SEND_OUTPUT 0` turns this part off and keeps everything else.
+
+The output and timeout defaults are deliberately conservative because a small local CPU model can take tens of seconds just to read a long prompt, before it even starts replying — see **Tuning it** below if you're on Anthropic or a beefier local setup and want more context.
+
+### Her picture reacts too
+
+Every reply ends with a `[mood: ...]` tag the model is instructed to add, picked from the same nine moods already wired up to real art (`normal`, `angry`, `happy`, `surprised`, `sleepy`, `scared`, `fedup`, `worried`, `disgusted`, see Part 6). `my/ai-say` in `ai.sh` strips the tag before printing and uses it to update her picture live, same as every other mood change, and is lenient about the exact format (a bare `[happy]` works too, not just `[mood: happy]`, since smaller local models don't always follow instructions precisely) as long as the word is one of those nine. If the tag is missing or not recognized, it just falls back to normal rather than guessing.
+
+### Affection
+
+Unlike every other `tsun` subcommand, each real exchange with `tsun talk` adds a small amount of affection (`MY_CHAT_BUMP`, 1 point), capped at `MY_CHAT_BUMP_MAX` per day (10) so it can't be farmed by spamming messages. Past the cap, chatting keeps working, it just stops raising affection until the next day. Unlike the settings below, these two are fixed, not exposed to `tsun aisetup` or anything else live — a user-adjustable cap would defeat the entire point of having one. Edit the two lines directly at the top of `ai.sh` if you genuinely want to change them.
+
+### Ending a chat
+
+In the interactive loop, type `/bye`, `/exit` or `/quit`, or just press Ctrl-D.
+
+### Tuning it
+
+Everything above that's a number or an on/off switch is a live setting, changed with `tsun aisetup` instead of editing `ai.sh`:
+
+```bash
+tsun aisetup                          # list every setting and its current value
+tsun aisetup MY_OLLAMA_NUM_PREDICT 80 # change one
+tsun aisetup reset                    # back to defaults
+```
+
+`tsun aisetup` only ever shows and accepts the rows that apply to whichever provider `tsun ai` currently has active (the "Applies to" column below) — asking for an Ollama-only setting while on Anthropic, or the other way round, is refused with a message telling you to switch providers first, rather than silently doing nothing.
+
+| Setting | Default | Applies to | What it does |
+|---|---|---|---|
+| `MY_AI_HISTORY_TURNS` | 6 | both | Exchanges kept in context during an interactive chat |
+| `MY_AI_TIMEOUT` | 20 | anthropic | Seconds before an Anthropic request gives up |
+| `MY_OLLAMA_TIMEOUT` | 90 | ollama | Seconds before an Ollama request gives up (cold model loads are slow) |
+| `MY_AI_SEND_OUTPUT` | 1 | both | 1 to send recent terminal output as context, 0 to stop |
+| `MY_AI_OUTPUT_LINES` | 25 | both | Scrollback lines pulled from WezTerm for context |
+| `MY_AI_OUTPUT_CHARS` | 1200 | both | Cap on how much of that scrollback actually gets sent |
+| `MY_OLLAMA_KEEPALIVE` | `10m` | ollama | How long Ollama keeps the model loaded between messages |
+| `MY_OLLAMA_NUM_PREDICT` | 150 | ollama | Hard cap on Ollama's reply length, in tokens |
+
+**Settings are saved per provider**, not shared, since Anthropic (fast, hosted) and Ollama (as slow as your hardware) usually want different values for the same knob — for example a much bigger `MY_AI_OUTPUT_CHARS` with Anthropic than you'd want on a small local model. Each provider gets its own file, `~/.cache/tsundere/ai-limits-anthropic` / `~/.cache/tsundere/ai-limits-ollama`, and `tsun aisetup` always shows and edits whichever provider is currently active with `tsun ai` — switching providers with `tsun ai anthropic`/`tsun ai ollama` applies that provider's own saved values immediately, no restart needed. `MY_OLLAMA_HOST` (default `http://localhost:11434`) is the one connection detail that isn't here, since it's not really a "limit" — change it at the top of `ai.sh` if your Ollama server lives somewhere else.
 
 ---
 ## Troubleshooting
@@ -321,6 +403,9 @@ Open a **new** WezTerm window, then try each of these.
 | Background looks broken | Press `Ctrl+Shift+L` in WezTerm to open the debug overlay and read the error |
 | No greeting | It only shows when `SHLVL` is 1, and only between 5 and 12 or 23 and 5 |
 | `shuf` not found | Install coreutils |
+| `tsun talk` always fails | Check `command -v curl`, `tsun ai` shows a provider, and (Anthropic) `echo $ANTHROPIC_API_KEY` is set, or (Ollama) `curl http://localhost:11434/api/tags` responds |
+| `tsun ai ollama` finds no models | `ollama list` is empty, pull one first (`ollama pull dolphin-mistral` or any model name) |
+| Her picture doesn't change during chat | The reply is missing a valid `[mood: ...]` tag, she falls back to normal; check `ai.sh`'s system prompt still asks for it |
 | Ghost lines in scrollback | Run `clear` once, old ghosts do not vanish on their own |
 | Running the exact same command twice in a row only reacts once | Expected if `HISTCONTROL` includes `ignoredups`, the repeat never becomes a new history entry so there is nothing new to notice |
 | `history` now shows a timestamp column | Expected, `HISTTIMEFORMAT` is set so duration and "did anything run" can be worked out without ble.sh |
