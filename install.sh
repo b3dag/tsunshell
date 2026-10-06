@@ -37,7 +37,7 @@ install_file() {
 }
 
 echo "== Shell logic"
-install_file "$HERE/shell/tsundere.sh" "$HOME/.tsundere.sh"
+install_file "$HERE/shell/tsundere.sh" "$HOME/.config/tsundere/tsundere.sh"
 
 echo "== Phrase files"
 bash "$HERE/scripts/lines.sh"
@@ -72,7 +72,7 @@ Put these four lines at the very end of ~/.bashrc, in this order.
 
   source ~/.local/share/blesh/ble.sh --noattach
   eval "$(starship init bash)"
-  [[ -f ~/.tsundere.sh ]] && source ~/.tsundere.sh
+  [[ -f ~/.config/tsundere/tsundere.sh ]] && source ~/.config/tsundere/tsundere.sh
   [[ ${BLE_VERSION-} ]] && ble-attach
 
 Then open a new terminal. The sudo messages and the goodbye line are optional,

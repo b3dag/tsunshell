@@ -3,7 +3,7 @@ $directory$git_branch$git_status$cmd_duration ${custom.tsundere}
 $character"""
 
 [custom.tsundere]
-command = "shuf -n1 $HOME/.config/tsundere-phrases.txt"
+command = "shuf -n1 $HOME/.config/tsundere/phrases.txt"
 when = '[ ! -e "${XDG_CACHE_HOME:-$HOME/.cache}/tsundere/muted" ]'
 format = "[$output]($style)"
 style = "bold #AD2476"

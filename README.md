@@ -40,7 +40,7 @@ To remove it again, run `./uninstall.sh`.
 
 | Path | Purpose |
 |---|---|
-| `shell/tsundere.sh` | All the shell logic, installed as `~/.tsundere.sh` |
+| `shell/tsundere.sh` | All the shell logic, installed as `~/.config/tsundere/tsundere.sh` |
 | `scripts/lines.sh` | Creates all phrase files, safe to run again |
 | `wezterm/wezterm.lua` | WezTerm config that swaps the image |
 | `starship/starship.toml` | Starship config with the phrase on the path line |

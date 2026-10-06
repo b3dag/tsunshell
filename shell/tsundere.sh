@@ -1,14 +1,15 @@
 # Tsundere terminal
-# Save as ~/.tsundere.sh and load it from .bashrc after ble.sh is sourced
+# Save as ~/.config/tsundere/tsundere.sh and load it from .bashrc after ble.sh is sourced
+# Everything, code, phrases and images, lives in ~/.config/tsundere/
 
 # Files
-INSULTS_FILE="$HOME/.config/tsundere-insults.txt"
-PRAISE_FILE="$HOME/.config/tsundere-praise.txt"
-PHRASES_FILE="$HOME/.config/tsundere-phrases.txt"
 LINES_DIR="$HOME/.config/tsundere"
+INSULTS_FILE="$LINES_DIR/insults.txt"
+PRAISE_FILE="$LINES_DIR/praise.txt"
+PHRASES_FILE="$LINES_DIR/phrases.txt"
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}"
-METER_FILE="$CACHE_DIR/tsundere-meter"
 STATE_DIR="$CACHE_DIR/tsundere"
+METER_FILE="$STATE_DIR/meter"
 STATE_FILE="$STATE_DIR/state"
 MUTE_FILE="$STATE_DIR/muted"
 SEEN_FILE="$STATE_DIR/lastseen"
@@ -180,6 +181,10 @@ function my/greet {
   h=$((10#$h))
   if ((h >= 5 && h < 12)); then
     my/say "$LINES_DIR/morning.txt" "$MY_C_INFO"
+  elif ((h >= 12 && h < 17)); then
+    my/say "$LINES_DIR/afternoon.txt" "$MY_C_INFO"
+  elif ((h >= 17 && h < 23)); then
+    my/say "$LINES_DIR/evening.txt" "$MY_C_INFO"
   elif ((h >= 23 || h < 5)); then
     my/say "$LINES_DIR/night.txt" "$MY_C_INFO"
   fi
