@@ -27,7 +27,7 @@ All lines are plain text files, so you can add your own without touching any cod
 ## Install
 
 ```bash
-git clone <your repo url>
+git clone github.com/b3dag/tsunshell
 cd tsundere-terminal
 ./install.sh
 ```
