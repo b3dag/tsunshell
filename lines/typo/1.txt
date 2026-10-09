@@ -1,0 +1,4 @@
+D-Did you mean `%s`? Idiot.
+Hmph, it's obviously `%s`, baka!
+Try `%s` next time, baka, and get it right.
+Hmph, `%s` isn't that hard to spell, idiot.

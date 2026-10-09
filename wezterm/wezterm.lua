@@ -19,7 +19,6 @@ local MOOD_FILE = {
   angry = 'poutangry',
   happy = 'blushsmile',
   surprised = 'noclue',
-  sleepy = 'hah',
   scared = 'fear',       -- a dangerous command that failed
   fedup = 'sad',         -- three or more failures in a row
   worried = 'worried',   -- bedtime nag, long-session break reminder
@@ -38,9 +37,6 @@ local TALK_FILE = {
 
 -- How long after she speaks the talking face stays up
 local TALK_SECONDS = 2.5
-
--- Seconds without activity before she falls asleep
-local SLEEP_AFTER = 300
 
 -- outfit/crop -> width/height, read fresh from sprites/ratios.txt, written
 -- automatically by scripts/sprites.sh for every outfit it crops. Adding a
@@ -110,20 +106,18 @@ config.status_update_interval = 1000
 local state = {}
 
 -- Runs every second. Reads the mood, outfit, crop and size the shell sent,
--- sizes her to the window and swaps the image. Activity is detected from
--- cursor movement and mood changes. Size only ever scales the SAME crop, it
--- never changes which part of her is in frame, that is crop's job.
+-- sizes her to the window and swaps the image. Size only ever scales the
+-- SAME crop, it never changes which part of her is in frame, that is
+-- crop's job.
 wezterm.on('update-status', function(window, pane)
   local id = window:window_id()
   local dims = window:get_dimensions()
 
-  local pos = pane:get_cursor_position()
   local uv = pane:get_user_vars()
   local mood = uv.tsun_mood or 'normal'
   local outfit = uv.tsun_outfit or DEFAULT_OUTFIT
   local crop = uv.tsun_crop or DEFAULT_CROP
   local size = tonumber(uv.tsun_size) or DEFAULT_SIZE
-  local sig = pos.x .. ',' .. pos.y .. ',' .. mood .. ',' .. outfit .. ',' .. crop .. ',' .. size
   local now = os.time()
   local talk_ts = tonumber(uv.tsun_talk)
   local talking = talk_ts ~= nil and (now - talk_ts) < TALK_SECONDS
@@ -135,28 +129,18 @@ wezterm.on('update-status', function(window, pane)
 
   local st = state[id]
   if not st then
-    st = { sig = sig, t = now, shown = '' }
+    st = { shown = '' }
     state[id] = st
   end
 
-  if st.sig ~= sig then
-    st.sig = sig
-    st.t = now
-  end
-
-  local want = mood
-  if mood ~= 'off' and now - st.t >= SLEEP_AFTER then
-    want = 'sleepy'
-  end
-
-  local dir, file, ratio = resolve(outfit, crop, want, talking)
+  local dir, file, ratio = resolve(outfit, crop, mood, talking)
   local w = ratio and math.floor(h * ratio) or 0
-  local shown = want .. '|' .. tostring(talking) .. '|' .. outfit .. '|' .. crop .. '|' .. h
+  local shown = mood .. '|' .. tostring(talking) .. '|' .. outfit .. '|' .. crop .. '|' .. h
 
   if st.shown ~= shown then
     st.shown = shown
     local overrides = window:get_config_overrides() or {}
-    overrides.background = bg(dir, file, want, w, h)
+    overrides.background = bg(dir, file, mood, w, h)
     window:set_config_overrides(overrides)
   end
 end)

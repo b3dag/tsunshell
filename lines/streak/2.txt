@@ -1,0 +1,4 @@
+Hmph, a %s streak. Keep it up, I guess.
+W-Wow, %s straight. I might actually be impressed.
+Hmph, %s in a row, that's actually kind of impressive.
+I-I'm keeping count, you know. %s so far.

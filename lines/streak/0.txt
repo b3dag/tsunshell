@@ -1,0 +1,3 @@
+%s in a row. Whatever, keep going.
+Tch, %s straight. Not that it means anything.
+Hmph, %s. Fine, don't let it stop now.

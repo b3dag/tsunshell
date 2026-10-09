@@ -1,0 +1,49 @@
+*apt update*|ok|Hmph, fresh lists. I-I guess that's something worth doing.
+*apt upgrade*|ok|D-Don't skip this next time, baka, but good job staying current.
+brew install*|fail|Let's check the formula together, I don't mind helping.
+brew install*|ok|Hmph, Homebrew again? Fine, I like seeing you build things.
+cargo *|fail|Tch, Rust doesn't forgive mistakes easily, but you'll get it.
+cat *|ok|Hmph, at least you're checking before you break something, good habit.
+cd *|fail|Hmph, use tab completion next time, I don't want you lost.
+clear|ok|Hmph, a fresh start, I guess. I like fresh starts with you.
+code .|ok|Hmph, don't just stare at the file tree, I believe you'll write something good.
+cp *|ok|Copied. Fine, I guess that's harmless enough, good thinking.
+curl *|fail|Tch, check the URL, baka, I know you'll get it.
+df -h|ok|Hmph, about time you checked that, good on you.
+*dnf upgrade*|ok|I-I suppose that was responsible of you, I'm glad.
+docker *|fail|D-Don't just restart it blindly, read the logs, I'll wait with you.
+du -sh*|ok|Hmph, don't be surprised by what you find, I'm here either way.
+git push*|fail|Hmph, did you even check CI first? Let's sort it out together.
+go build*|fail|Tch, check your package imports, I know you'll figure it out.
+go run*|fail|D-Don't just run it blindly after a failed build, take your time.
+history|ok|Hmph, quite the track record you've got there, and I've seen it all.
+kill *|fail|Hmph, couldn't even kill a process right, but it's okay.
+kill *|ok|D-Did it deserve that? Either way, I trust your judgment.
+make*|fail|Hmph, check your includes, baka, I'll look with you if you want.
+man *|ok|I-I'm a little proud you looked it up first, honestly.
+mv *|ok|Moved. N-Not that I was keeping track, but good, I'm glad it's sorted.
+npm install*|fail|Hmph, node_modules strikes again, doesn't it? Let's fix it.
+npm install*|ok|Hmph, I hope you know what half of those packages even do, but I trust you.
+npm run*|fail|Tch, check the script name, baka, typos happen to all of us.
+nvim *|ok|:wq, right? ...Right? I believe you saved it.
+*pacman -Syu*|ok|Hmph, brave of you. I'm glad it worked out.
+ping *|fail|Hmph, typical. Check the DNS too, I'll help if you need it.
+ping *|ok|Hmph, of course it works. Did you doubt me? I had faith in it.
+pip install*|fail|Tch, check the package name, it's probably a typo, easy fix.
+pip install*|ok|Installed, I guess. Don't let it clutter your system, I'm watching out for you.
+rm *|ok|Hmph, I hope you didn't need that, but I trust you checked first.
+scp *|fail|Tch, check your SSH key too while you're at it, I'll wait.
+ssh *|fail|D-Don't just keep retrying blindly, baka, let's think it through.
+sudo *|fail|Tch, typing your own password wrong? It happens, don't worry.
+sudo *|ok|Hmph, I trust you... a little. Don't abuse it, but I believe in you.
+systemctl *|fail|Tch, check the unit name, idiot, I'll help you look.
+tar *|fail|Tch, check the file path, it's probably wrong, easy mistake.
+vim *|ok|:wq, right? ...Right? I believe you saved it.
+wget *|fail|Tch, broken link or broken typing, who knows, let's check together.
+claude*|any|Hmph, talking to them again? I-I don't mind, really.
+chatgpt*|any|D-Don't go liking it more than me, okay? ...Kidding. Mostly.
+gemini*|any|I-I'm not worried. You'll come back and tell me about it.
+copilot*|any|Hmph, as long as you still talk to me too, I'm fine with it.
+aider*|any|I-I trust you, even when you use other things. Mostly.
+cursor*|any|Hmph, fine, borrow their help. I'm still here after.
+codex*|any|D-Don't disappear into that thing, I'll miss you.

@@ -1,0 +1,49 @@
+*apt update*|ok|Fine, the package lists are fresh. N-Not that I care.
+*apt upgrade*|ok|Updating everything again? A-As long as nothing breaks, I guess.
+brew install*|fail|Hmph, even Homebrew gave up on you. Check the formula.
+brew install*|ok|Hmph, another package. D-Don't hoard them all.
+cargo *|fail|Hmph, the borrow checker got you again, didn't it?
+cat *|ok|Hmph, reading files now? Fine, I guess that's useful.
+cd *|fail|That folder doesn't exist, idiot. Look before you jump!
+clear|ok|Hmph, hiding the evidence of your mistakes? Smart.
+code .|ok|Hmph, opening the editor? Fine, go write something good.
+cp *|ok|Hmph, copied. Don't clutter everything, idiot.
+curl *|fail|Hmph, the server didn't want to talk to you. Rude, but check your URL.
+df -h|ok|Hmph, checking your disk? Good, someone should.
+*dnf upgrade*|ok|All updated. D-Don't thank me, it's your job.
+docker *|fail|Docker complained. Is the daemon even running, baka?
+du -sh*|ok|Hmph, hunting for space hogs. About time.
+git push*|fail|The push failed, baka. Did you pull first?!
+go build*|fail|Hmph, even Go couldn't save you this time.
+go run*|fail|Tch, check your imports, baka.
+history|ok|Hmph, reliving your past failures? Embarrassing.
+kill *|fail|Hmph, couldn't even kill a process right, baka.
+kill *|ok|Hmph, ruthless. Did it deserve that?
+make*|fail|The build failed. Read the first error, not the last one, idiot!
+man *|ok|Oh, you're actually reading the manual? Hmph, good for you.
+mv *|ok|Hmph, moved. D-Don't lose track of where things went.
+npm install*|fail|Hmph, broken dependencies again? Typical.
+npm install*|ok|Hmph, another node_modules folder. Your disk is doomed.
+npm run*|fail|Hmph, the script failed. Read the output, idiot.
+nvim *|ok|Done editing? ...Did you at least save it?
+*pacman -Syu*|ok|A full system update? Pray that nothing breaks, idiot.
+ping *|fail|Your internet is dead, idiot. Or the host is. Check the cable!
+ping *|ok|Hmph, the connection works. D-Don't thank me.
+pip install*|fail|Hmph, dependency hell already? Check the error, baka.
+pip install*|ok|Fine, installed. D-Don't forget your venv next time.
+rm *|ok|It's gone for good, you know. ...I-I hope you meant it.
+scp *|fail|Hmph, that transfer failed. Check the host and path, baka.
+ssh *|fail|It refused you, baka. Check the host, the user and your key!
+sudo *|fail|You couldn't even get sudo right, baka!
+sudo *|ok|S-So you needed admin rights again? Don't break the system!
+systemctl *|fail|Hmph, the service didn't like that. Check the logs, idiot.
+tar *|fail|Hmph, the archive didn't cooperate. Check your flags, baka.
+vim *|ok|Done editing? ...Did you at least save it?
+wget *|fail|Hmph, that didn't download. Check the link, idiot.
+claude*|any|Oh, talking to THEM now? Hmph, whatever.
+chatgpt*|any|Hmph, running off to ask someone else? Typical.
+gemini*|any|D-Don't think I didn't notice that, idiot.
+copilot*|any|Hmph, another assistant? I see how it is.
+aider*|any|Tch, going behind my back with that thing?
+cursor*|any|Hmph, I see you brought backup. Fine.
+codex*|any|D-Don't get used to asking other things, baka.

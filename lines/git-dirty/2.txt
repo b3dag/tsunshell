@@ -1,0 +1,4 @@
+C-Commit something already, it's not hard!
+Hmph, your git status looks like a crime scene.
+Y-You really let it pile up this much, huh?
+I-I'm not mad, just... concerned about your workflow.

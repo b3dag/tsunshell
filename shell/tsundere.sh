@@ -5,9 +5,6 @@
 
 # Files
 LINES_DIR="$HOME/.config/tsundere"
-INSULTS_FILE="$LINES_DIR/insults.txt"
-PRAISE_FILE="$LINES_DIR/praise.txt"
-PHRASES_FILE="$LINES_DIR/phrases.txt"
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}"
 STATE_DIR="$CACHE_DIR/tsundere"
 METER_FILE="$STATE_DIR/meter"
@@ -18,6 +15,8 @@ FIRST_SEEN_FILE="$STATE_DIR/firstseen"
 OUTFIT_FILE="$STATE_DIR/outfit"
 CROP_FILE="$STATE_DIR/crop"
 SIZE_FILE="$STATE_DIR/size"
+NAME_FILE="$STATE_DIR/name"
+MEMORY_FILE="$STATE_DIR/memories"
 
 # Colors as r;g;b
 MY_C_ERR="173;36;118"
@@ -44,15 +43,40 @@ MY_SIZE_DEFAULT=30     # her height as a percent of the window, see tsun size
 MY_SIZE_MIN=10
 MY_SIZE_MAX=60
 MY_SIZE_STEP=5          # change per tsun size bigger/smaller
+MY_NAME_LEVEL=3         # minimum affection level before she'll use a pet name
+MY_NAME_CHANCE=4        # uses it 1 in this many lines, once unlocked
+MY_AMBIENT_CHANCE=20    # checks system state 1 in this many commands
+MY_BATTERY_LOW=15       # percent, while actually discharging
+MY_DISK_HIGH=90         # percent used, on /
+MY_MEMORY_MAX=15        # how many specific moments she keeps at once
+MY_MEMORY_CHANCE=150    # callback to one happens 1 in this many successes
+MY_GATE_DANGER=1        # 1 to ask [y/N] before rm -rf/git push --force/etc
+                        # actually run, 0 for the old after-the-fact-only warning
+MY_GATE_JEALOUS=1       # 1 to ask [Y/n] before launching another AI's CLI
+MY_JEALOUS_CMDS=(claude claude-desktop chatgpt gemini copilot aider cursor codex)
+                        # add more here any time, nothing else to register.
+                        # must be the REAL command: an alias (check with
+                        # `type -a <name>`) always wins over a same-named
+                        # function, so wrapping just the alias's name does
+                        # nothing, list whatever it actually points to too
 
 # Lets `history 1` report when each command was entered, in epoch seconds,
 # which is how duration and "did a new command actually run" are worked out
 # without ble.sh or any other preexec library. Side effect: plain `history`
 # now shows that timestamp column too, in every tab, for the rest of the
-# session. Known gap: if HISTCONTROL drops an exact repeat of the previous
-# command (ignoredups), that repeat is invisible here too, since there is
-# no new history entry to notice.
+# session.
 HISTTIMEFORMAT='%s '
+
+# ignoredups (part of the common ignoreboth) would make an exact repeat of
+# the previous command create no new history entry at all, which is the
+# only thing the line above can see - repeat a command and she would stay
+# silent on it. Keep ignorespace (leading-space-hides-from-history) if it
+# was there, just drop the dups part.
+case $HISTCONTROL in
+  ignoreboth) HISTCONTROL=ignorespace ;;
+  ignoredups) HISTCONTROL= ;;
+  *) HISTCONTROL=${HISTCONTROL//ignoredups/} ;;
+esac
 
 # State
 MY_MOOD_METER=0
@@ -69,17 +93,29 @@ MY_S_BEST=0
 MY_FAIL_STREAK=0
 MY_CHAT_TODAY=0
 MY_CMD=
+MY_PREV_CMD=
+MY_PREV_OK=0
+MY_LAST_DECLINED=
 MY_SPOKE=
-MY_LAST_HISTNUM=0
+MY_LAST_HISTNUM=
 MY_LAST_BREAK=$SECONDS
 MY_OUTFIT=
 MY_CROP=waist
 MY_SIZE=$MY_SIZE_DEFAULT
+MY_PET_NAME=
 
-# Print a random line from a file in a color, even when muted
+# Print a random line from a file in a color, even when muted. Past
+# MY_NAME_LEVEL, occasionally leads with whatever pet name is set
+# (tsun name), same line otherwise, nothing content files need to care
+# about.
 function my/say-force {
   [[ -f $1 ]] || return 1
-  printf '\033[1;38;2;%sm%s\033[0m\n' "$2" "$(shuf -n1 "$1")"
+  local line
+  line=$(shuf -n1 "$1")
+  if [[ $MY_PET_NAME && $MY_LEVEL -ge $MY_NAME_LEVEL ]] && ((RANDOM % MY_NAME_CHANCE == 0)); then
+    line="$MY_PET_NAME, $line"
+  fi
+  printf '\033[1;38;2;%sm%s\033[0m\n' "$2" "$line"
   MY_SPOKE=1
 }
 
@@ -89,31 +125,21 @@ function my/say {
   my/say-force "$1" "$2"
 }
 
-# Pick the line file for the current affection level, result in REPLY
+# Resolves <category> (a lines/<category>/ folder) + the current
+# affection level to a file, walking down from the current level to 0 so
+# a category that hasn't filled in every tier still degrades to the
+# closest one that exists instead of failing outright. Files are named
+# 0-4, matching MY_LEVEL directly. Result in REPLY, empty if that
+# category has nothing at any level.
 function my/pool {
   REPLY=
-  case $1 in
-    insults)
-      if ((MY_LEVEL >= 4)); then
-        REPLY="$LINES_DIR/insults-4.txt"
-      elif ((MY_LEVEL >= 3)); then
-        REPLY="$LINES_DIR/insults-3.txt"
-      elif ((MY_LEVEL >= 2)); then
-        REPLY="$LINES_DIR/insults-2.txt"
-      fi
-      [[ -f $REPLY ]] || REPLY=$INSULTS_FILE
-      ;;
-    praise)
-      if ((MY_LEVEL >= 1)); then
-        REPLY="$LINES_DIR/praise-$MY_LEVEL.txt"
-      fi
-      [[ -f $REPLY ]] || REPLY=$PRAISE_FILE
-      ;;
-    levelup)
-      REPLY="$LINES_DIR/levelup-$MY_LEVEL.txt"
-      [[ -f $REPLY ]] || REPLY="$LINES_DIR/levelup.txt"
-      ;;
-  esac
+  local n
+  for ((n = MY_LEVEL; n >= 0; n--)); do
+    if [[ -f "$LINES_DIR/$1/$n.txt" ]]; then
+      REPLY="$LINES_DIR/$1/$n.txt"
+      return
+    fi
+  done
 }
 
 # Tells WezTerm which girl image to show, ignored in other terminals
@@ -171,6 +197,11 @@ function my/size-load {
   MY_SIZE=$MY_SIZE_DEFAULT
   [[ -f $SIZE_FILE ]] && read -r MY_SIZE < "$SIZE_FILE"
   [[ $MY_SIZE =~ ^[0-9]+$ ]] && ((MY_SIZE >= MY_SIZE_MIN && MY_SIZE <= MY_SIZE_MAX)) || MY_SIZE=$MY_SIZE_DEFAULT
+}
+
+function my/name-load {
+  MY_PET_NAME=
+  [[ -f $NAME_FILE ]] && read -r MY_PET_NAME < "$NAME_FILE"
 }
 
 # Pushes the current mood to WezTerm right now, for tsun outfit/crop/on and startup
@@ -266,7 +297,19 @@ function my/notify {
 # Command specific reactions from reactions.txt, $1 is ok or fail
 # Prints one matching line and returns 0, or returns 1 when nothing matches
 function my/react {
-  local file="$LINES_DIR/reactions.txt" pat when msg
+  # The jealousy gate (my/gate, when MY_GATE_JEALOUS is on) already said her
+  # piece on this exact command before it ran; reactions/ still has its own
+  # claude*/gemini*/etc. "any" entries for when the gate is off, but with it
+  # on they would just be a redundant second line right after the gate's own
+  if ((MY_GATE_JEALOUS)); then
+    local jc
+    for jc in "${MY_JEALOUS_CMDS[@]}"; do
+      [[ ${MY_CMD%% *} == "$jc" ]] && return 1
+    done
+  fi
+
+  my/pool reactions
+  local file=$REPLY pat when msg
   local -a hits=()
   [[ -f $file ]] || return 1
   while IFS='|' read -r pat when msg; do
@@ -279,10 +322,12 @@ function my/react {
   printf '\033[1;38;2;%sm%s\033[0m\n' "$MY_C_INFO" "${hits[RANDOM % ${#hits[@]}]}"
 }
 
-# Reaction to a specific exit code from exitcodes.txt, regardless of command
-# Prints one matching line and returns 0, or returns 1 when nothing matches
+# Reaction to a specific exit code from lines/exitcodes/, regardless of
+# command. Prints one matching line and returns 0, or returns 1 when
+# nothing matches
 function my/exit-reaction {
-  local file="$LINES_DIR/exitcodes.txt" code msg
+  my/pool exitcodes
+  local file=$REPLY code msg
   local -a hits=()
   [[ -f $file ]] || return 1
   while IFS='|' read -r code msg; do
@@ -299,13 +344,13 @@ function my/greet {
   printf -v h '%(%H)T' -1
   h=$((10#$h))
   if ((h >= 5 && h < 12)); then
-    my/say "$LINES_DIR/morning.txt" "$MY_C_INFO"
+    my/pool morning; my/say "$REPLY" "$MY_C_INFO"
   elif ((h >= 12 && h < 17)); then
-    my/say "$LINES_DIR/afternoon.txt" "$MY_C_INFO"
+    my/pool afternoon; my/say "$REPLY" "$MY_C_INFO"
   elif ((h >= 17 && h < 23)); then
-    my/say "$LINES_DIR/evening.txt" "$MY_C_INFO"
+    my/pool evening; my/say "$REPLY" "$MY_C_INFO"
   elif ((h >= 23 || h < 5)); then
-    my/say "$LINES_DIR/night.txt" "$MY_C_INFO"
+    my/pool night; my/say "$REPLY" "$MY_C_INFO"
   fi
 }
 
@@ -320,10 +365,249 @@ function my/away-check {
   if ((last > 0 && now - last >= MY_AWAY_SECS)); then
     MY_MOOD_METER=0
     my/meter-save
-    my/say "$LINES_DIR/away.txt" "$MY_C_WARN"
+    my/pool away; my/say "$REPLY" "$MY_C_WARN"
     return 0
   fi
   return 1
+}
+
+# Occasional comment on the machine itself rather than the command, cheap
+# sysfs/proc reads so only worth the trouble 1 in MY_AMBIENT_CHANCE times.
+# Checks battery, then disk, then load, says at most one line, returns 0
+# if it said anything.
+function my/ambient-check {
+  ((RANDOM % MY_AMBIENT_CHANCE == 0)) || return 1
+
+  local bat cap status
+  for bat in /sys/class/power_supply/BAT*; do
+    [[ -d $bat ]] || continue
+    cap= status=
+    [[ -f "$bat/capacity" ]] && read -r cap < "$bat/capacity"
+    [[ -f "$bat/status" ]] && read -r status < "$bat/status"
+    if [[ $status == Discharging && $cap =~ ^[0-9]+$ ]] && ((cap <= MY_BATTERY_LOW)); then
+      my/pool battery
+      my/say "$REPLY" "$MY_C_WARN" && return 0
+    fi
+    break
+  done
+
+  local disk_pct
+  disk_pct=$(df -P / 2>/dev/null | awk 'NR==2 { gsub("%", "", $5); print $5 }')
+  if [[ $disk_pct =~ ^[0-9]+$ ]] && ((disk_pct >= MY_DISK_HIGH)); then
+    my/pool disk
+    my/say "$REPLY" "$MY_C_WARN" && return 0
+  fi
+
+  local load1 cores
+  read -r load1 _ < /proc/loadavg 2>/dev/null
+  cores=$(nproc 2>/dev/null) || cores=1
+  if [[ $load1 ]] && ((${load1%.*} >= cores)); then
+    my/pool load
+    my/say "$REPLY" "$MY_C_WARN" && return 0
+  fi
+
+  return 1
+}
+
+# Records a specific moment, oldest trimmed off past MY_MEMORY_MAX. Keep
+# $1 generic and safe to persist to disk indefinitely, never the actual
+# command text (it could contain a path, a secret, anything).
+function my/memory-add {
+  mkdir -p "$STATE_DIR" 2>/dev/null
+  local now
+  printf -v now '%(%s)T' -1
+  printf '%s|%s\n' "$now" "$1" >> "$MEMORY_FILE"
+  local trimmed
+  trimmed=$(tail -n "$MY_MEMORY_MAX" "$MEMORY_FILE")
+  printf '%s\n' "$trimmed" > "$MEMORY_FILE"
+}
+
+# Picks one memory at random, detail text (the part after the
+# timestamp) in REPLY. Returns 1 if there are none yet.
+function my/memory-recall {
+  REPLY=
+  [[ -s $MEMORY_FILE ]] || return 1
+  local line
+  line=$(shuf -n1 "$MEMORY_FILE" 2>/dev/null)
+  [[ $line ]] || return 1
+  REPLY=${line#*|}
+}
+
+# Asks a real [y/N] (or [Y/n] if $2 is Y) question, the line itself drawn
+# from <category>'s current level same as any other pool, so the exact
+# wording warms up with affection too. Reacts to the actual answer right
+# away too, from <category>-yes or <category>-no, rather than leaving
+# that to whatever else happens to fire in the normal post-command
+# reaction. Returns 0 to proceed, 1 to cancel. Never touches mood/stats
+# itself, see the two command wrappers below for how a cancel still
+# flows into the usual post-command reaction.
+function my/gate {
+  my/pool "$1"
+  local line hint="y/N" a approved=
+  line=$(shuf -n1 "$REPLY" 2>/dev/null)
+  [[ $line ]] || line="Are you sure about that?"
+  [[ $2 == Y ]] && hint="Y/n"
+  [[ $1 == danger-gate ]] && my/mood worried
+  [[ $1 == jealous-gate ]] && my/mood fedup
+  read -r -p "$(printf '\033[1;38;2;%sm%s [%s] \033[0m' "$MY_C_WARN" "$line" "$hint")" a
+  if [[ -z $a ]]; then
+    [[ $2 == Y ]] && approved=1
+  else
+    [[ $a == [yY]* ]] && approved=1
+  fi
+  my/pool "$1-$([[ $approved ]] && echo yes || echo no)"
+  my/say "$REPLY" "$MY_C_WARN"
+  # The next real precmd cycle has the final say on her picture once the
+  # command (or the decision not to run it) actually finishes, this is
+  # just what she looks like for the moment, while you're deciding and
+  # right after you answer
+  case $1 in
+    danger-gate) [[ $approved ]] && my/mood worried || my/mood surprised ;;
+    jealous-gate) [[ $approved ]] && my/mood fedup || my/mood happy ;;
+  esac
+  [[ $approved ]]
+}
+
+# Checks requirements and setup, reports what's missing or broken.
+# Doesn't touch mood/stats, same as every other tsun subcommand.
+function my/doctor {
+  local bad=0 warn=0
+
+  row() { printf '%-15s %s\n' "$1" "$2"; }
+
+  echo "Requirements"
+  row "bash" "ok ($BASH_VERSION)"
+  if command -v shuf >/dev/null 2>&1; then
+    row "shuf" "ok"
+  else
+    row "shuf" "MISSING, install coreutils"; ((bad++))
+  fi
+  if command -v python3 >/dev/null 2>&1; then
+    row "python3" "ok ($(python3 --version 2>&1 | awk '{print $2}'))"
+  else
+    row "python3" "missing, typo suggestions and AI chat won't work"; ((warn++))
+  fi
+  if [[ $COLORTERM == truecolor || $COLORTERM == 24bit ]]; then
+    row "truecolor" "ok ($COLORTERM)"
+  else
+    row "truecolor" "not detected (\$COLORTERM=${COLORTERM:-unset}), colors may look wrong"; ((warn++))
+  fi
+
+  echo
+  echo "Shell hook"
+  if [[ $PROMPT_COMMAND == *my/tsundere-precmd* ]]; then
+    row "precmd hook" "ok"
+  else
+    row "precmd hook" "MISSING, source tsundere.sh from .bashrc"; ((bad++))
+  fi
+  if [[ -o history ]]; then
+    row "history" "ok"
+  else
+    row "history" "off, mood tracking needs it (set -o history)"; ((bad++))
+  fi
+
+  echo
+  echo "WezTerm (optional, for the picture)"
+  if [[ $TERM_PROGRAM == WezTerm ]]; then
+    row "running in" "ok (WezTerm)"
+    if command -v wezterm >/dev/null 2>&1; then
+      row "wezterm cli" "ok"
+    else
+      row "wezterm cli" "not found, AI chat won't get recent-output context"; ((warn++))
+    fi
+    local outfits
+    outfits=$(my/outfits-list 2>/dev/null | tr '\n' ' ')
+    if [[ $outfits ]]; then
+      row "outfits" "ok ($outfits)"
+    else
+      row "outfits" "none installed, run scripts/sprites.sh or install.sh with images"; ((warn++))
+    fi
+    if [[ -f "$LINES_DIR/sprites/ratios.txt" ]]; then
+      row "ratios.txt" "ok"
+    else
+      row "ratios.txt" "missing, the picture will stay blank"; ((warn++))
+    fi
+  else
+    row "running in" "not WezTerm (\$TERM_PROGRAM=${TERM_PROGRAM:-unset}), picture disabled, rest still works"
+  fi
+
+  echo
+  echo "Command gates"
+  if ((MY_GATE_DANGER)); then
+    if declare -F rm >/dev/null && declare -F git >/dev/null; then
+      row "danger gate" "ok (rm, git, dd, chmod, mkfs wrapped)"
+    else
+      row "danger gate" "MY_GATE_DANGER is on but the wrappers aren't defined, re-source tsundere.sh"; ((bad++))
+    fi
+  else
+    row "danger gate" "off (MY_GATE_DANGER=0), old after-the-fact warning only"
+  fi
+  if ((MY_GATE_JEALOUS)); then
+    local jc jc_alias wrapped=() shadowed=()
+    for jc in "${MY_JEALOUS_CMDS[@]}"; do
+      jc_alias=$(alias "$jc" 2>/dev/null)
+      if [[ $jc_alias ]]; then
+        shadowed+=("$jc")
+      elif declare -F "$jc" >/dev/null; then
+        wrapped+=("$jc")
+      fi
+    done
+    if ((${#wrapped[@]})); then
+      row "jealous gate" "ok (${wrapped[*]})"
+    else
+      row "jealous gate" "on, but none of MY_JEALOUS_CMDS are installed"
+    fi
+    if ((${#shadowed[@]})); then
+      row "" "${shadowed[*]} aliased, wrapping does nothing, add what the alias points to instead"
+      ((warn++))
+    fi
+  else
+    row "jealous gate" "off (MY_GATE_JEALOUS=0)"
+  fi
+
+  echo
+  echo "AI chat (optional)"
+  if command -v curl >/dev/null 2>&1; then
+    row "curl" "ok"
+  else
+    row "curl" "missing, needed for tsun talk"; ((warn++))
+  fi
+  if [[ -f "$LINES_DIR/ai.sh" ]]; then
+    row "ai.sh" "ok"
+  else
+    row "ai.sh" "missing, tsun ai/talk won't work"; ((warn++))
+  fi
+  local ai_provider= ai_model=
+  [[ -f "$STATE_DIR/ai" ]] && read -r ai_provider ai_model < "$STATE_DIR/ai"
+  if [[ -z $ai_provider ]]; then
+    row "provider" "off (tsun ai anthropic / tsun ai ollama)"
+  else
+    row "provider" "ok ($ai_provider, $ai_model)"
+    if [[ $ai_provider == anthropic ]]; then
+      if [[ -n ${ANTHROPIC_API_KEY-} ]]; then
+        row "ANTHROPIC_API_KEY" "ok"
+      else
+        row "ANTHROPIC_API_KEY" "not set, tsun talk will fail"; ((bad++))
+      fi
+    elif [[ $ai_provider == ollama ]]; then
+      local host=${MY_OLLAMA_HOST:-http://localhost:11434}
+      if command -v curl >/dev/null 2>&1 && curl -s --max-time 3 "$host/api/tags" >/dev/null 2>&1; then
+        row "ollama" "ok ($host reachable)"
+      else
+        row "ollama" "can't reach $host, is 'ollama serve' running?"; ((bad++))
+      fi
+    fi
+  fi
+
+  unset -f row
+  echo
+  if ((bad)); then
+    printf '\033[1;38;2;%sm%s\033[0m\n' "$MY_C_ERR" "Hmph, $bad thing(s) actually broken. Fix those first, baka."
+  elif ((warn)); then
+    printf '\033[1;38;2;%sm%s\033[0m\n' "$MY_C_WARN" "Mostly fine, $warn thing(s) you might want to look at."
+  else
+    printf '\033[1;38;2;%sm%s\033[0m\n' "$MY_C_PRAISE" "Hmph, everything checks out. Don't let it go to your head."
+  fi
 }
 
 # The tsun command, type tsun for the list
@@ -334,13 +618,15 @@ function tsun {
       mkdir -p "$STATE_DIR"
       : > "$MUTE_FILE"
       my/mood off
-      my/say-force "$LINES_DIR/tsun-off.txt" "$MY_C_INFO" ||
+      my/pool tsun-off
+      my/say-force "$REPLY" "$MY_C_INFO" ||
         echo "Tsundere mode is off. Type 'tsun on' to bring her back."
       ;;
     on)
       rm -f "$MUTE_FILE"
       my/sync-now
-      my/say-force "$LINES_DIR/tsun-on.txt" "$MY_C_INFO" ||
+      my/pool tsun-on
+      my/say-force "$REPLY" "$MY_C_INFO" ||
         printf '\033[1;38;2;%sm%s\033[0m\n' "$MY_C_INFO" "Hmph, you needed me back already? F-Fine."
       ;;
     stats)
@@ -372,7 +658,8 @@ function tsun {
       my/say-force "$REPLY" "$MY_C_INFO"
       ;;
     say)
-      my/say-force "$PHRASES_FILE" "$MY_C_INFO"
+      my/pool phrases
+      my/say-force "$REPLY" "$MY_C_INFO"
       ;;
     outfit)
       local target=${2-}
@@ -390,7 +677,8 @@ function tsun {
         mkdir -p "$STATE_DIR"
         printf '%s\n' "$MY_OUTFIT" > "$OUTFIT_FILE"
         my/sync-now
-        my/say-force "$LINES_DIR/tsun-outfit.txt" "$MY_C_INFO" ||
+        my/pool tsun-outfit
+        my/say-force "$REPLY" "$MY_C_INFO" ||
           printf '\033[1;38;2;%sm%s\033[0m\n' "$MY_C_INFO" "Hmph, this one? F-Fine, I guess it suits me."
       else
         echo "No such outfit: $target" >&2
@@ -407,7 +695,8 @@ function tsun {
         mkdir -p "$STATE_DIR"
         printf '%s\n' "$MY_CROP" > "$CROP_FILE"
         my/sync-now
-        my/say-force "$LINES_DIR/tsun-crop.txt" "$MY_C_INFO" ||
+        my/pool tsun-crop
+        my/say-force "$REPLY" "$MY_C_INFO" ||
           printf '\033[1;38;2;%sm%s\033[0m\n' "$MY_C_INFO" "Hmph, don't stare too much, idiot."
       else
         echo "Unknown crop: $target (use full, waist or bust)" >&2
@@ -435,14 +724,46 @@ function tsun {
       printf '%s\n' "$MY_SIZE" > "$SIZE_FILE"
       my/sync-now
       local sizeline
-      sizeline=$(shuf -n1 "$LINES_DIR/tsun-size.txt" 2>/dev/null)
+      my/pool tsun-size
+      sizeline=$(shuf -n1 "$REPLY" 2>/dev/null)
       [[ $sizeline ]] || sizeline='Hmph, happy now? (%s%)'
       printf '\033[1;38;2;%sm%s\033[0m\n' "$MY_C_INFO" "${sizeline//%s/$MY_SIZE}"
+      ;;
+    name)
+      local target=${2-}
+      if [[ -z $target ]]; then
+        if [[ $MY_PET_NAME ]]; then
+          echo "Pet name  $MY_PET_NAME"
+        else
+          echo "No pet name set. Usage: tsun name <name> | off"
+        fi
+      elif [[ $target == off ]]; then
+        MY_PET_NAME=
+        rm -f "$NAME_FILE"
+        echo "Fine. Back to baka/idiot, I guess."
+      else
+        MY_PET_NAME=$target
+        mkdir -p "$STATE_DIR"
+        printf '%s\n' "$MY_PET_NAME" > "$NAME_FILE"
+        my/pool tsun-name
+        my/say-force "$REPLY" "$MY_C_INFO" ||
+          printf '\033[1;38;2;%sm%s\033[0m\n' "$MY_C_INFO" "Hmph, $MY_PET_NAME? Fine, I guess I'll call you that."
+      fi
+      ;;
+    memories)
+      if [[ -s $MEMORY_FILE ]]; then
+        echo "Things she remembers:"
+        while IFS='|' read -r ts detail; do
+          printf '  %s\n' "$detail"
+        done < "$MEMORY_FILE"
+      else
+        echo "Nothing yet. Give her something worth remembering, baka."
+      fi
       ;;
     reset)
       read -r -p "Reset mood, stats, affection and how long she's known you? [y/N] " a
       if [[ $a == [yY]* ]]; then
-        rm -f "$METER_FILE" "$STATE_FILE" "$SEEN_FILE" "$FIRST_SEEN_FILE"
+        rm -f "$METER_FILE" "$STATE_FILE" "$SEEN_FILE" "$FIRST_SEEN_FILE" "$MEMORY_FILE"
         MY_MOOD_METER=0
         MY_TOTAL=0
         MY_LEVEL=0
@@ -451,9 +772,10 @@ function tsun {
         echo "...Fine. We start from zero, baka."
       fi
       ;;
-    ai|talk|aisetup)
+    ai|talk)
       # Lives in its own file so this one doesn't keep growing, loaded only
-      # the first time any of these is actually used
+      # the first time either of these is actually used. `tsun ai setup`
+      # (tuning settings) lives under here too, see ai.sh.
       if ! declare -F my/ai-dispatch >/dev/null; then
         if [[ -f "$LINES_DIR/ai.sh" ]]; then
           source "$LINES_DIR/ai.sh"
@@ -464,8 +786,11 @@ function tsun {
       fi
       my/ai-dispatch "$@"
       ;;
+    doctor)
+      my/doctor
+      ;;
     *)
-      echo "Usage  tsun off | on | stats | say | reset | outfit [name] | crop [name] | size [bigger|smaller|reset|N] | ai [anthropic|ollama|off] [model] | talk [message] | aisetup [name value|reset]"
+      echo "Usage  tsun off | on | stats | say | reset | outfit [name] | crop [name] | size [bigger|smaller|reset|N] | name [name|off] | memories | ai [anthropic|ollama|off|setup] [model|name value] | talk [message] | doctor"
       ;;
   esac
 }
@@ -474,6 +799,17 @@ function tsun {
 command_not_found_handle() {
   if [[ -e $MUTE_FILE ]]; then
     echo "bash: $1: command not found" >&2
+    return 127
+  fi
+
+  # Exact repeat of the last attempt, which also failed: bash always
+  # routes a not-found command here before my/tsundere-precmd ever runs,
+  # so precmd's own repeat_of_fail check never gets a chance to react for
+  # these - mirror it here instead, or retyping the same typo gets a
+  # brand new insult and "did you mean" every single time
+  if [[ "$*" == "$MY_PREV_CMD" && $MY_PREV_OK == 0 ]]; then
+    my/pool repeat-fail
+    my/say-force "$REPLY" "$MY_C_WARN" >&2
     return 127
   fi
 
@@ -515,7 +851,8 @@ for c in cands:
 print(best[-1] if best else "")
 ' "$1")
     if [[ $s ]]; then
-      line=$(shuf -n1 "$LINES_DIR/typo.txt" 2>/dev/null)
+      my/pool typo
+      line=$(shuf -n1 "$REPLY" 2>/dev/null)
       [[ $line ]] || line='D-Did you mean `%s`? Idiot.'
       printf '\033[1;38;2;%sm%s\033[0m\n' "$MY_C_ERR" "${line//%s/$s}" >&2
     fi
@@ -523,12 +860,66 @@ print(best[-1] if best else "")
   return 127
 }
 
+# Tab completion for `tsun`. Outfit names are a live scan same as `tsun
+# outfit` itself; the `ai setup` names are listed by hand since reading
+# them out of ai.sh would mean loading it just for a tab press. If a
+# setting gets added there, add its short name here too.
+function _tsun_complete {
+  local cur=${COMP_WORDS[COMP_CWORD]}
+  COMPREPLY=()
+  if ((COMP_CWORD == 1)); then
+    COMPREPLY=($(compgen -W "off on stats say outfit crop size name memories reset ai talk doctor" -- "$cur"))
+    return
+  fi
+  case ${COMP_WORDS[1]} in
+    outfit)
+      ((COMP_CWORD == 2)) &&
+        COMPREPLY=($(compgen -W "$(my/outfits-list 2>/dev/null | tr '\n' ' ')" -- "$cur"))
+      ;;
+    crop)
+      ((COMP_CWORD == 2)) && COMPREPLY=($(compgen -W "full waist bust" -- "$cur"))
+      ;;
+    size)
+      ((COMP_CWORD == 2)) && COMPREPLY=($(compgen -W "bigger smaller reset" -- "$cur"))
+      ;;
+    name)
+      ((COMP_CWORD == 2)) && COMPREPLY=($(compgen -W "off" -- "$cur"))
+      ;;
+    ai)
+      if ((COMP_CWORD == 2)); then
+        COMPREPLY=($(compgen -W "anthropic ollama off setup" -- "$cur"))
+      elif [[ ${COMP_WORDS[2]} == setup ]] && ((COMP_CWORD == 3)); then
+        local provider= names="timeout history_turns send_output output_lines output_chars reply_limit reset"
+        [[ -f "$STATE_DIR/ai" ]] && read -r provider _ < "$STATE_DIR/ai"
+        [[ $provider == ollama ]] && names="$names keepalive"
+        COMPREPLY=($(compgen -W "$names" -- "$cur"))
+      fi
+      ;;
+  esac
+}
+complete -F _tsun_complete tsun
+
 # Runs on every prompt. Figures out from `history` whether a new command
 # actually ran since the last prompt (plain bash has no preexec hook, so
 # this is checked after the fact, not before), reacts to it, then updates
 # mood, stats and affection.
 function my/tsundere-precmd {
   local status=$?
+
+  # First-ever call for this shell: just learn where history currently
+  # stands and stop. This has to happen here, not at source time, because
+  # .bashrc can run before bash has finished loading $HISTFILE into memory
+  # - capture it too early and this reads back empty, the baseline falls
+  # back to "nothing happened yet", and the first real prompt then treats
+  # whatever is last in the history FILE (maybe from hours ago, maybe from
+  # a different terminal) as a command that just ran, old timestamp and
+  # all. By the time this function is called at all, bash is already about
+  # to show a prompt, which means history is guaranteed to be loaded.
+  if [[ -z $MY_LAST_HISTNUM ]]; then
+    read -r MY_LAST_HISTNUM _ <<< "$(builtin history 1 2>/dev/null)"
+    [[ $MY_LAST_HISTNUM =~ ^[0-9]+$ ]] || MY_LAST_HISTNUM=0
+    return
+  fi
 
   # Did anything new actually run? (first prompt, or an empty Enter, leave
   # the history count unchanged; see the HISTTIMEFORMAT comment above for
@@ -551,6 +942,18 @@ function my/tsundere-precmd {
     return
   fi
 
+  # Exact repeat of the last command, same outcome as last time too - still
+  # reacts below, but doesn't move the mood meter/streak/affection again.
+  # Spamming a known-good command would otherwise be a free way to farm
+  # points, and spamming a known-bad one (habit, up-arrow+enter without
+  # changing anything) would otherwise keep stacking the same penalty for
+  # the one mistake she already reacted to.
+  local repeat_of_ok= repeat_of_fail=
+  if [[ $MY_CMD == "$MY_PREV_CMD" ]]; then
+    [[ $MY_PREV_OK == 1 ]] && repeat_of_ok=1
+    [[ $MY_PREV_OK == 0 ]] && repeat_of_fail=1
+  fi
+
   local now
   printf -v now '%(%s)T' -1
   local dur=$((now - ts))
@@ -567,6 +970,16 @@ function my/tsundere-precmd {
       ;;
   esac
 
+  # Same idea as $danger above: the jealousy gate already said her piece on
+  # this exact command before it ran, when it's on
+  local jealous=
+  if ((MY_GATE_JEALOUS)); then
+    local jc
+    for jc in "${MY_JEALOUS_CMDS[@]}"; do
+      [[ ${MY_CMD%% *} == "$jc" ]] && { jealous=1; break; }
+    done
+  fi
+
   local face=normal said= oldlevel
   MY_SPOKE=
 
@@ -577,7 +990,7 @@ function my/tsundere-precmd {
   oldlevel=$MY_LEVEL
   printf '%s\n' "$now" > "$SEEN_FILE"
 
-  if ((status != 0)); then
+  if ((status != 0)) && [[ -z $repeat_of_fail ]]; then
     ((MY_MOOD_METER -= MY_MOOD_PENALTY))
     ((MY_MOOD_METER < 0)) && MY_MOOD_METER=0
     ((MY_S_FAIL++))
@@ -586,7 +999,12 @@ function my/tsundere-precmd {
     ((MY_FAIL_STREAK++))
     ((MY_TOTAL > 0)) && ((MY_TOTAL--))
 
-    [[ $danger ]] && my/say "$LINES_DIR/danger.txt" "$MY_C_WARN"
+    # The gate (my/gate, when MY_GATE_DANGER is on) already said her piece
+    # before this ran, so this would just be a redundant second warning
+    if [[ $danger ]] && ((!MY_GATE_DANGER)); then
+      my/pool danger
+      my/say "$REPLY" "$MY_C_WARN"
+    fi
 
     # Status 127 already got an insult and a suggestion from the handler
     if ((status != 127)); then
@@ -595,17 +1013,33 @@ function my/tsundere-precmd {
         my/say "$REPLY" "$MY_C_ERR"
       fi
       if ((dur >= MY_NOTIFY_SECS)) && ! my/is-interactive; then
-        my/notify "Command failed" "${MY_CMD%% *} failed after ${dur}s. $(shuf -n1 "$INSULTS_FILE" 2>/dev/null)"
+        my/pool insults
+        my/notify "Command failed" "${MY_CMD%% *} failed after ${dur}s. $(shuf -n1 "$REPLY" 2>/dev/null)"
       fi
     fi
 
     if [[ $danger ]]; then
       face=scared
+      my/memory-add "that scary command that went wrong"
     elif ((MY_FAIL_STREAK >= 3)); then
       face=fedup
     else
       face=angry
     fi
+  elif ((status != 0)); then
+    # Same failing command as last time - she already reacted to this
+    # exact mistake once, no need to pile the penalty on again. Status 127
+    # already got its own reaction from command_not_found_handle above,
+    # same exception the normal fail branch makes.
+    if ((status != 127)); then
+      my/pool repeat-fail
+      my/say "$REPLY" "$MY_C_WARN"
+    fi
+  elif [[ $repeat_of_ok ]]; then
+    # Same command, same result as last time - still worth a word, but
+    # no extra mood/streak/affection, see repeat_of_ok above
+    my/pool repeat
+    my/say "$REPLY" "$MY_C_INFO"
   else
     ((MY_MOOD_METER++))
     ((MY_MOOD_METER > MY_MOOD_MAX)) && MY_MOOD_METER=$MY_MOOD_MAX
@@ -614,7 +1048,10 @@ function my/tsundere-precmd {
     MY_FAIL_STREAK=0
     ((MY_S_STREAK++))
     ((MY_S_STREAK > MY_S_BEST)) && MY_S_BEST=$MY_S_STREAK
-    ((MY_S_STREAK > MY_EVER)) && MY_EVER=$MY_S_STREAK
+    if ((MY_S_STREAK > MY_EVER)); then
+      MY_EVER=$MY_S_STREAK
+      my/memory-add "the time you hit a $MY_EVER-command streak"
+    fi
     ((MY_TOTAL++))
     my/calc-level
 
@@ -623,19 +1060,25 @@ function my/tsundere-precmd {
       my/pool levelup
       my/say "$REPLY" "$MY_C_PRAISE" && said=1
       face=happy
+      my/memory-add "the day you reached '${MY_LEVEL_NAMES[MY_LEVEL]}'"
     fi
 
     if [[ $danger ]]; then
-      # She survived the scary command
-      my/say "$LINES_DIR/danger.txt" "$MY_C_WARN"
+      # She already said her piece in the gate (my/gate) if that's on;
+      # only give the old standalone reaction when it's off
+      ((MY_GATE_DANGER)) || { my/pool danger; my/say "$REPLY" "$MY_C_WARN"; }
       face=surprised
+      my/memory-add "that dangerous command you survived"
+    elif [[ $jealous ]]; then
+      : # she already said everything that needed saying, in the gate
     else
       # Streak milestone
       if [[ -z $said ]]; then
         local m line
         for m in "${MY_STREAK_MILESTONES[@]}"; do
           if ((MY_S_STREAK == m)); then
-            line=$(shuf -n1 "$LINES_DIR/streak.txt" 2>/dev/null)
+            my/pool streak
+            line=$(shuf -n1 "$REPLY" 2>/dev/null)
             if [[ $line ]]; then
               printf '\033[1;38;2;%sm%s\033[0m\n' "$MY_C_PRAISE" "${line//%s/$m}"
               said=1
@@ -649,17 +1092,32 @@ function my/tsundere-precmd {
 
       # Rare sweet line
       if [[ -z $said ]] && ((RANDOM % MY_RARE_CHANCE == 0)); then
-        my/say "$LINES_DIR/rare.txt" "$MY_C_PRAISE" && said=1
+        my/pool rare
+        my/say "$REPLY" "$MY_C_PRAISE" && said=1
         face=happy
+      fi
+
+      # Occasional callback to a specific remembered moment
+      if [[ -z $said ]] && ((RANDOM % MY_MEMORY_CHANCE == 0)) && my/memory-recall; then
+        local detail=$REPLY mline
+        my/pool memory
+        mline=$(shuf -n1 "$REPLY" 2>/dev/null)
+        if [[ $mline ]]; then
+          printf '\033[1;38;2;%sm%s\033[0m\n' "$MY_C_PRAISE" "${mline//%s/$detail}"
+          said=1
+          face=happy
+          MY_SPOKE=1
+        fi
       fi
 
       # Slow command finished, skip interactive programs
       if ((dur >= MY_SLOW_SECS)) && ! my/is-interactive; then
+        my/pool slow
         if [[ -z $said ]]; then
-          my/say "$LINES_DIR/slow.txt" "$MY_C_INFO" && said=1
+          my/say "$REPLY" "$MY_C_INFO" && said=1
         fi
         if ((dur >= MY_NOTIFY_SECS)); then
-          my/notify "Command finished" "${MY_CMD%% *} finished after ${dur}s. $(shuf -n1 "$LINES_DIR/slow.txt" 2>/dev/null)"
+          my/notify "Command finished" "${MY_CMD%% *} finished after ${dur}s. $(shuf -n1 "$REPLY" 2>/dev/null)"
         fi
       fi
 
@@ -673,9 +1131,19 @@ function my/tsundere-precmd {
         local n
         n=$(git status --porcelain 2>/dev/null | wc -l)
         if ((n >= MY_GIT_DIRTY)); then
-          my/say "$LINES_DIR/git-dirty.txt" "$MY_C_WARN" && { said=1; face=disgusted; }
+          my/pool git-dirty
+          my/say "$REPLY" "$MY_C_WARN" && { said=1; face=disgusted; }
+        elif [[ $MY_CMD == "git status"* ]]; then
+          if ((n == 0)); then
+            my/pool git-status-clean
+            my/say "$REPLY" "$MY_C_PRAISE" && said=1
+          else
+            my/pool git-status-dirty
+            my/say "$REPLY" "$MY_C_INFO" && said=1
+          fi
         elif [[ $MY_CMD == "git push"* || $MY_CMD == "git commit"* ]] && ((n == 0)); then
-          my/say "$LINES_DIR/git-clean.txt" "$MY_C_PRAISE" && said=1
+          my/pool git-clean
+          my/say "$REPLY" "$MY_C_PRAISE" && said=1
         fi
       fi
 
@@ -694,27 +1162,94 @@ function my/tsundere-precmd {
         printf -v h '%(%H)T' -1
         h=$((10#$h))
         if ((h >= 23 || h < 5)) && ((RANDOM % MY_NIGHT_CHANCE == 0)); then
-          my/say "$LINES_DIR/night.txt" "$MY_C_INFO" && { said=1; face=worried; }
+          my/pool night
+          my/say "$REPLY" "$MY_C_INFO" && { said=1; face=worried; }
         fi
       fi
 
       # Nothing else fired, fall back to a generic phrase
       if [[ -z $said ]]; then
-        my/say "$PHRASES_FILE" "$MY_C_INFO"
+        my/pool phrases
+        my/say "$REPLY" "$MY_C_INFO"
       fi
     fi
   fi
 
+  MY_PREV_CMD=$MY_CMD
+  # A declined gate (rm -rf, git push --force, another AI's CLI...) counts
+  # as a success below so it doesn't read as a failure, but nothing actually
+  # ran - leave MY_PREV_OK empty rather than 1, so actually approving the
+  # same command next time isn't mistaken for a repeat of something that
+  # never happened
+  if [[ $MY_LAST_DECLINED ]]; then
+    MY_PREV_OK=
+    MY_LAST_DECLINED=
+  else
+    MY_PREV_OK=$((status == 0 ? 1 : 0))
+  fi
+
   # Break reminder after a long session
   if ((SECONDS - MY_LAST_BREAK >= MY_BREAK_SECS)); then
-    my/say "$LINES_DIR/break.txt" "$MY_C_WARN" && face=worried
+    my/pool break
+    my/say "$REPLY" "$MY_C_WARN" && face=worried
     MY_LAST_BREAK=$SECONDS
   fi
+
+  # Rare comment on the machine itself (battery/disk/load), not the command
+  my/ambient-check && face=worried
 
   my/meter-save
   my/state-save
   my/mood "$face"
 }
+
+# Gated commands: a plain bash function can't intercept a command before
+# it runs in general (there's no preexec hook without ble.sh or similar),
+# but it CAN intercept itself -- define a function with the same name as
+# a real command and it runs instead, for anything typed directly at this
+# prompt. `command <name> "$@"` below calls the real one when approved.
+# Cancelling returns 0 (not 1): nothing destructive happened, so it reads
+# to the precmd hook as "survived", not "failed".
+if ((MY_GATE_DANGER)); then
+  function rm {
+    case " $* " in
+      *" -rf "*|*" -fr "*|*" -r "*|*" -R "*)
+        my/gate danger-gate || { MY_LAST_DECLINED=1; return 0; }
+        ;;
+    esac
+    command rm "$@"
+  }
+
+  function git {
+    if [[ $1 == push ]]; then
+      local arg
+      for arg in "$@"; do
+        [[ $arg == --force || $arg == -f ]] && { my/gate danger-gate || { MY_LAST_DECLINED=1; return 0; }; break; }
+      done
+    fi
+    command git "$@"
+  }
+
+  function dd { my/gate danger-gate || { MY_LAST_DECLINED=1; return 0; }; command dd "$@"; }
+
+  function chmod {
+    [[ " $* " == *" -R "*777* || " $* " == *777*" -R "* ]] && { my/gate danger-gate || { MY_LAST_DECLINED=1; return 0; }; }
+    command chmod "$@"
+  }
+
+  function mkfs { my/gate danger-gate || { MY_LAST_DECLINED=1; return 0; }; command mkfs "$@"; }
+fi
+
+if ((MY_GATE_JEALOUS)); then
+  for __my_jealous_cmd in "${MY_JEALOUS_CMDS[@]}"; do
+    command -v "$__my_jealous_cmd" >/dev/null 2>&1 || continue
+    eval "function $__my_jealous_cmd {
+      my/gate jealous-gate Y || { MY_LAST_DECLINED=1; return 0; }
+      command $__my_jealous_cmd \"\$@\"
+    }"
+  done
+  unset __my_jealous_cmd
+fi
 
 # Run first, before anything else in PROMPT_COMMAND, so $? still reflects
 # the command that just ran rather than something PROMPT_COMMAND itself did.
@@ -726,8 +1261,6 @@ PROMPT_COMMAND="my/tsundere-precmd${PROMPT_COMMAND:+; $PROMPT_COMMAND}"
 
 # Startup, load state, greet or complain about the absence, set the face
 mkdir -p "$STATE_DIR" 2>/dev/null
-read -r MY_LAST_HISTNUM _ <<< "$(builtin history 1 2>/dev/null)"
-[[ $MY_LAST_HISTNUM =~ ^[0-9]+$ ]] || MY_LAST_HISTNUM=0
 my/meter-load
 my/state-load
 my/calc-level
@@ -735,6 +1268,7 @@ my/first-seen
 my/outfit-load
 my/crop-load
 my/size-load
+my/name-load
 if ((SHLVL <= 1)); then
   my/away-check || my/greet
 fi

@@ -1,0 +1,6 @@
+130|Tch, hit Ctrl-C? Whatever, your call.
+137|Hmph, out of memory. Not my problem.
+139|Hmph, segfault. Computers crash, who cares.
+143|Tch, terminated. Not my business.
+126|Hmph, no permission. Figure it out.
+124|Tch, timed out. Whatever.

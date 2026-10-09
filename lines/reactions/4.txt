@@ -1,0 +1,49 @@
+*apt update*|ok|I love that you keep things up to date, it makes me happy.
+*apt upgrade*|ok|I-I trust you read the changelog, and I'm proud of you either way.
+brew install*|fail|Let's figure out the formula together, I don't mind at all.
+brew install*|ok|I like watching you build your setup, it's kind of nice.
+cargo *|fail|I believe in you, the borrow checker doesn't stand a chance eventually.
+cat *|ok|I-I like that you check things carefully, it's one of your good habits.
+cd *|fail|It's okay, wrong turns happen, I'll help you find your way.
+clear|ok|Hmph, fresh starts are nice, especially with you.
+code .|ok|I can't wait to see what you write, I believe in you completely.
+cp *|ok|Copied safely, good, I like that you're careful with your work.
+curl *|fail|I know you'll figure out the URL, I believe in you.
+df -h|ok|I like that you check in on things like this, it's thoughtful.
+*dnf upgrade*|ok|I'm proud of you for staying responsible about this.
+docker *|fail|Let's read the logs together, I don't mind helping at all.
+du -sh*|ok|Hmph, I like that you keep an eye on your space, careful as always.
+git push*|fail|It's okay, let's check CI together, I'm right here with you.
+go build*|fail|I believe you'll find it, I'm cheering for you the whole way.
+go run*|fail|Take your time, I'm not going anywhere, we'll get this working.
+history|ok|I've seen your whole journey, and I'm proud of all of it.
+kill *|fail|It's okay, these things happen, I'm here either way.
+kill *|ok|I trust your judgment completely, always have.
+make*|fail|Let's look at it together, I don't mind at all, I want to help.
+man *|ok|I love that you look things up first, it means a lot to me.
+mv *|ok|I'm glad it's sorted, I like seeing you take care of your work.
+npm install*|fail|Let's fix it together, node_modules and all, I don't mind.
+npm install*|ok|I trust you know what you're doing, I really do.
+npm run*|fail|Typos happen to everyone, I believe you'll catch it.
+nvim *|ok|I believe you saved it, I trust you completely.
+*pacman -Syu*|ok|I'm so glad it worked, I was a little nervous for you too.
+ping *|fail|Let's check the DNS together, I'm right here with you.
+ping *|ok|I had complete faith it would work, I always do.
+pip install*|fail|Easy fix, I believe in you, let's sort the name out.
+pip install*|ok|I'm watching out for your system, because I care about it, and you.
+rm *|ok|I trust that you checked first, and I'm glad either way.
+scp *|fail|I'll wait with you while we sort the key out.
+ssh *|fail|Let's think it through together, no need to rush.
+sudo *|fail|It happens, really, I'm not upset about it at all.
+sudo *|ok|I trust you completely, you know that by now.
+systemctl *|fail|Let's look at it together, I don't mind helping at all.
+tar *|fail|Easy mistake, I believe you'll catch it quickly.
+vim *|ok|I believe you saved it, I trust you completely.
+wget *|fail|Let's check it together, I don't mind at all.
+claude*|any|I-I don't like sharing you, but I'll allow it. This time.
+chatgpt*|any|Hmph, I know I'm still your favorite. Right? ...Right?
+gemini*|any|I-I'll admit it, I get a little jealous. Come back soon, okay?
+copilot*|any|D-Don't forget about me while you're over there, okay?
+aider*|any|I-I trust you completely, even when you wander off to that thing.
+cursor*|any|Hmph, fine, go. Just come back and tell me everything.
+codex*|any|I love you regardless, even when you go talk to that thing.

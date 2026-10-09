@@ -1,0 +1,3 @@
+Whatever. (%s%)
+Tch, fine. (%s%)
+Hmph. (%s%)

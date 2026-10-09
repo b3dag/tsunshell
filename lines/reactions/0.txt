@@ -1,0 +1,49 @@
+*apt update*|ok|Fine, lists updated. Whatever.
+*apt upgrade*|ok|Upgraded. Don't care if it breaks.
+brew install*|fail|Tch, even Homebrew gave up on you.
+brew install*|ok|Whatever, another package.
+cargo *|fail|Tch, the borrow checker got you. Not my problem.
+cat *|ok|Whatever, you can read. Fine.
+cd *|fail|Tch, wrong path. Pay attention.
+clear|ok|Hiding your mistakes? Whatever.
+code .|ok|Fine, go write something.
+cp *|ok|Copied. Don't clutter everything.
+curl *|fail|Tch, check the URL yourself.
+df -h|ok|Whatever, checking disk space.
+*dnf upgrade*|ok|Updated. Not that I was tracking it.
+docker *|fail|Tch, check your Dockerfile.
+du -sh*|ok|Whatever, hunting for space hogs.
+git push*|fail|The push failed. Did you even pull first?!
+go build*|fail|Tch, even Go couldn't save you.
+go run*|fail|Tch, check your imports yourself.
+history|ok|Reliving your failures, embarrassing.
+kill *|fail|Tch, couldn't even kill a process right.
+kill *|ok|Ruthless. Whatever.
+make*|fail|The build failed. Read the error, not my job.
+man *|ok|Reading the manual. Fine, whatever.
+mv *|ok|Moved. Don't lose track of it.
+npm install*|fail|Tch, broken dependencies, typical.
+npm install*|ok|Another node_modules folder. Doomed.
+npm run*|fail|Tch, the script failed. Read the output.
+nvim *|ok|Done? Hope you saved it.
+*pacman -Syu*|ok|A full update. Pray nothing breaks.
+ping *|fail|Your internet's dead, idiot. Check the cable.
+ping *|ok|Works. Whatever, don't thank me.
+pip install*|fail|Dependency hell, baka. Check the error.
+pip install*|ok|Installed, I guess. Whatever.
+rm *|ok|Gone for good. Hope you meant it.
+scp *|fail|Tch, that transfer failed. Check the path.
+ssh *|fail|It refused you. Check the key yourself.
+sudo *|fail|You couldn't even get sudo right, baka!
+sudo *|ok|Needed admin rights again. Whatever.
+systemctl *|fail|Tch, check the logs yourself.
+tar *|fail|Tch, check the flags, idiot.
+vim *|ok|Done? Hope you saved it.
+wget *|fail|Tch, check the link yourself.
+claude*|any|Tch, go talk to them then. See if I care.
+chatgpt*|any|Whatever. Go bother someone else.
+gemini*|any|Hmph, fine. Replace me, see how that goes.
+copilot*|any|Tch, another one. Whatever.
+aider*|any|Go on then. Not my problem.
+cursor*|any|Hmph, whatever works for you.
+codex*|any|Tch, fine, go ask them instead.

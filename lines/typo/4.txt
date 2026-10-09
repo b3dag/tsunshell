@@ -1,0 +1,4 @@
+I-I think you meant `%s`, don't worry, I've got your back.
+Hmph, it's `%s`, I'll always catch these for you.
+It's okay, it's `%s`. I don't mind helping you at all.
+I-I like being the one who catches these for you, it's `%s`.

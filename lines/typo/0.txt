@@ -1,0 +1,3 @@
+It's `%s`. Can't you even spell?!
+Tch, `%s`, obviously. Figure it out next time.
+Hmph, `%s`. Whatever, try again.

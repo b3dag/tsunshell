@@ -1,0 +1,4 @@
+I-I guess you meant `%s`... don't thank me!
+Was it `%s`? Hmph, obviously.
+I-I'm only telling you it's `%s` because I have to.
+D-Did your fingers slip? It's `%s`.

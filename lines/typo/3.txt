@@ -1,0 +1,4 @@
+I think you meant `%s`, here, let me just tell you.
+Hmph, close enough, you meant `%s`, I know what you're trying to do.
+It's `%s`, no judgment, typos happen to everyone.
+I-I don't mind helping you catch these, it's `%s`.

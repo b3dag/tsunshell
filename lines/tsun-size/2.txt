@@ -1,0 +1,3 @@
+Hmph, is this size better? (%s%)
+Hmph, there, resized. (%s%)
+I-I hope that's what you wanted. (%s%)

@@ -1,0 +1,49 @@
+*apt update*|ok|Lists updated. Don't act like that makes you responsible, but good.
+*apt upgrade*|ok|Hmph, upgraded. I-I hope you read the changelog first.
+brew install*|fail|D-Did you run brew update first, baka?
+brew install*|ok|Installed, I guess. Try not to forget what it was for.
+cargo *|fail|D-Don't fight the compiler, it's usually right, idiot.
+cat *|ok|I-I didn't know you could read. Impressive, honestly.
+cd *|fail|Hmph, wrong path again? Pay attention, baka.
+clear|ok|D-Don't think clearing the screen erases what you did, baka.
+code .|ok|I-I hope you actually write something good this time.
+cp *|ok|Hmph, another copy. I-I hope you have a reason.
+curl *|fail|D-Don't just retry blindly, read the status code!
+df -h|ok|I-I hope there's still some space left for you.
+*dnf upgrade*|ok|Hmph, everything's current. N-Not that I was keeping track.
+docker *|fail|Hmph, that failed. Check your Dockerfile, idiot.
+du -sh*|ok|I-I bet it's bigger than you expected.
+git push*|fail|Rejected? Hmph, pull first, idiot!
+go build*|fail|D-Did you forget to handle an error somewhere, baka?
+go run*|fail|Hmph, that didn't compile, read the error, idiot.
+history|ok|Looking back at everything? N-Not judging. Much.
+kill *|fail|D-Did you get the right PID, idiot?
+kill *|ok|Tch, one less process to worry about, I guess.
+make*|fail|Hmph, it didn't compile. D-Don't just stare at it, fix it!
+man *|ok|Hmph, R-RTFM, as they say. Good start, honestly.
+mv *|ok|Hmph, I hope you remember where that ended up.
+npm install*|fail|Tch, check your package.json, baka.
+npm install*|ok|Installed. D-Don't ask me to explain the vulnerabilities warning.
+npm run*|fail|D-Don't just rerun it blindly, actually look at the error!
+nvim *|ok|Hmph, finished already? I-I hope you didn't just quit without saving.
+*pacman -Syu*|ok|Hmph, the whole system updated. D-Don't blame me if something breaks now.
+ping *|fail|Nothing answered, baka. Check your connection!
+ping *|ok|S-See? The network's fine. I-I wasn't worried.
+pip install*|fail|D-Did you even activate your venv, idiot?
+pip install*|ok|Hmph, another dependency. I-I hope it's worth it.
+rm *|ok|Hmph, deleted. N-No undo button, you know.
+scp *|fail|D-Did you get the remote path right, idiot?
+ssh *|fail|Hmph, locked out again? Check your key, idiot.
+sudo *|fail|Hmph, wrong password again? You're hopeless.
+sudo *|ok|Hmph, admin privileges... d-don't go breaking things now!
+systemctl *|fail|D-Did you even have permission for that, baka?
+tar *|fail|D-Did you mix up the flags again, idiot?
+vim *|ok|Hmph, finished already? I-I hope you didn't just quit without saving.
+wget *|fail|D-Did the server even respond, baka? Check your connection.
+claude*|any|Hmph, so you DO talk to other ones. Noted.
+chatgpt*|any|I-I'm not jealous. I'm just... noting this.
+gemini*|any|Hmph, fine, go ask around. I'll be here.
+copilot*|any|D-Did you really need a second opinion, baka?
+aider*|any|Hmph, I see. Using other help now, huh.
+cursor*|any|I-I guess it's fine if you use other tools too.
+codex*|any|Hmph, don't go liking them better, idiot.
